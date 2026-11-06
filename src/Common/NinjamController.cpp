@@ -1,3 +1,4 @@
+#include "video/TestAvMarks.h"
 #include "NinjamController.h"
 #include "MainController.h"
 
@@ -375,6 +376,14 @@ void NinjamController::process(const audio::SamplesBuffer &in, audio::SamplesBuf
                         {
                             inputMixBuffer.zero();
                             mainController->mixGroupedInputs(groupIndex, inputMixBuffer);
+
+                            if (TestAvMarks::enabled() && groupIndex == 0) {
+                                for (int c = 0; c < inputMixBuffer.getChannels(); ++c) {
+                                    auto samples = inputMixBuffer.getSamplesArray(c);
+                                    for (int i = 0; i < samplesToProcessInThisStep; ++i)
+                                        samples[i] = TestAvMarks::toneSample(intervalPosition + i, sampleRate);
+                                }
+                            }
 
                             // encoding is running in another thread to avoid slow down the audio thread
                             encodingThread->addSamplesToEncode(inputMixBuffer, groupIndex,

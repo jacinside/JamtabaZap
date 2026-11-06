@@ -273,6 +273,11 @@ protected slots:
 
     void setNetworkUsageUpdatePeriod(quint32 periodInMilliseconds);
 
+private:
+    void initializeTestControl();
+    void runTestCommand(const QStringList &args);
+    void addVideoChannel();
+
 private slots:
 
     void showJamtabaCurrentVersion();

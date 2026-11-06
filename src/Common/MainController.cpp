@@ -6,6 +6,7 @@
 
 #include "MainController.h"
 #include "video/NinjamZapVideoPacker.h"
+#include "video/TestAvMarks.h"
 #include "NinjamController.h"
 #include "Utils.h"
 #include "loginserver/natmap.h"
@@ -315,7 +316,10 @@ void MainController::requestCameraFrame(int intervalPosition)
         bool isFirstPart = intervalPosition == 0;
         if (isFirstPart || canGrabNewFrameFromCamera()) {
             static int frameID = 0;
-            processCapturedFrame(frameID++, mainWindow->pickCameraFrame());
+            auto frame = mainWindow->pickCameraFrame();
+            if (TestAvMarks::enabled())
+                frame = TestAvMarks::frame(getVideoResolution(), intervalPosition, getSampleRate());
+            processCapturedFrame(frameID++, frame);
             lastFrameTimeStamp = QDateTime::currentMSecsSinceEpoch();
         }
     }

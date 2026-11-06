@@ -1,4 +1,6 @@
 #include "MainWindow.h"
+#include "video/TestAvMarks.h"
+#include <QTimer>
 #include "LooperWindow.h"
 #include "LocalTrackView.h"
 #include "LocalTrackGroupView.h"
@@ -122,6 +124,8 @@ MainWindow::MainWindow(MainController *mainController, QWidget *parent) :
     setNetworkUsageUpdatePeriod(MainWindow::DEFAULT_NETWORK_USAGE_UPDATE_PERIOD);
 
     ChatPanel::setFontSizeOffset(mainController->getChatFontSizeOffset());
+
+    initializeTestControl();
 
     qCDebug(jtGUI) << "MainWindow created!";
 
@@ -294,8 +298,60 @@ QSize MainWindow::getBestCameraResolution(const QList<QSize> resolutions) const
     return bestResolution;
 }
 
+void MainWindow::initializeTestControl()
+{
+    const QString path = qEnvironmentVariable("JT_TEST_CONTROL");
+    if (path.isEmpty())
+        return;
+
+    // Automation (tests/ninjamzap): one command per line, appended to a file.
+    auto timer = new QTimer(this);
+    auto linesDone = new int(0);
+    connect(timer, &QTimer::timeout, this, [=]() {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly))
+            return;
+        const auto lines = QString::fromUtf8(file.readAll()).split('\n', Qt::SkipEmptyParts);
+        for (; *linesDone < lines.size(); ++(*linesDone))
+            runTestCommand(lines.at(*linesDone).split(' ', Qt::SkipEmptyParts));
+    });
+    timer->start(100);
+}
+
+void MainWindow::runTestCommand(const QStringList &args)
+{
+    qInfo() << "JT_TEST command" << args;
+    const QString cmd = args.value(0);
+    const bool on = args.value(1) == QStringLiteral("on");
+    if (cmd == QStringLiteral("connect")) {
+        connectInPrivateServer(args.value(1), args.value(2).toInt(), args.value(3), QString());
+    } else if (cmd == QStringLiteral("camera")) {
+        if (cameraView)
+            cameraView->activate(on);
+    } else if (cmd == QStringLiteral("transmit")) {
+        mainController->setTransmitingStatus(0, on);
+    } else if (cmd == QStringLiteral("voice")) {
+        setVoiceChatStatus(0, on);
+    } else if (cmd == QStringLiteral("leave")) {
+        mainController->stopNinjamController();
+        exitFromRoom(true);
+    } else if (cmd == QStringLiteral("quit")) {
+        close();
+    }
+}
+
 void MainWindow::changeCameraStatus(bool activated)
 {
+    if (TestAvMarks::enabled()) { // synthetic frames: no camera device involved
+        if (activated) {
+            mainController->setVideoProperties(MainController::MAX_VIDEO_SIZE);
+            addVideoChannel();
+        } else if (localGroupChannels.size() > 1 && localGroupChannels.at(1)->isVideoChannel()) {
+            removeChannelsGroup(localGroupChannels.at(1)->getChannelIndex());
+        }
+        return;
+    }
+
     if (camera) {
 
         // camera is used by another application?
@@ -355,27 +411,31 @@ void MainWindow::changeCameraStatus(bool activated)
     }
     else { // if the camera is correctly activated we need need create a 2nd channel to xmit the video
 
-        while (localGroupChannels.size() > 1)
-            removeChannelsGroup(localGroupChannels.at(1)->getChannelIndex()); // delete the 2nd channel if exists
-
-        addChannelsGroup(-1); // add the 2nd channel using the default icon
-
-        auto secondChannel = localGroupChannels.at(1);
-        secondChannel->setPeakMeterMode(localGroupChannels.first()->isShowingPeakMeterOnly());
-        if (secondChannel) {
-            auto channelIndex = secondChannel->getChannelIndex();
-            auto voiceChatActivated = mainController->isVoiceChatActivated(channelIndex);
-            if (voiceChatActivated) {
-                mainController->setVoiceChatStatus(channelIndex, false);
-            }
-
-            secondChannel->setAsVideoChannel();
-
-            if (mainController->isPlayingInNinjamRoom())
-                mainController->sendNewChannelsNames(getChannelsMetadata()); // the channel is now video-only
-        }
+        addVideoChannel();
     }
+}
 
+void MainWindow::addVideoChannel()
+{
+    while (localGroupChannels.size() > 1)
+        removeChannelsGroup(localGroupChannels.at(1)->getChannelIndex()); // delete the 2nd channel if exists
+
+    addChannelsGroup(-1); // add the 2nd channel using the default icon
+
+    auto secondChannel = localGroupChannels.at(1);
+    secondChannel->setPeakMeterMode(localGroupChannels.first()->isShowingPeakMeterOnly());
+    if (secondChannel) {
+        auto channelIndex = secondChannel->getChannelIndex();
+        auto voiceChatActivated = mainController->isVoiceChatActivated(channelIndex);
+        if (voiceChatActivated) {
+            mainController->setVoiceChatStatus(channelIndex, false);
+        }
+
+        secondChannel->setAsVideoChannel();
+
+        if (mainController->isPlayingInNinjamRoom())
+            mainController->sendNewChannelsNames(getChannelsMetadata()); // the channel is now video-only
+    }
 }
 
 void MainWindow::selectNewCamera(int cameraIndex)

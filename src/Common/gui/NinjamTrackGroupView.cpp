@@ -138,6 +138,9 @@ void NinjamTrackGroupView::addVideoInterval(const QByteArray &encodedVideoData)
 
     FFMpegDemuxer *videoDecoder = new FFMpegDemuxer(this, encodedVideoData);
     connect(videoDecoder, &FFMpegDemuxer::imagesDecoded, this, [=](QList<QImage> images, uint frameRate){
+        if (qEnvironmentVariableIsSet("JT_TEST_CONTROL"))
+            qInfo() << "JT_TEST decoded images" << images.size();
+
         if (!images.isEmpty()) {
             videoFrameRate = frameRate;
             decodedImages << images;
