@@ -14,6 +14,7 @@ struct EncodedFrame {
     QByteArray sps;     // empty when the packet has none
     QByteArray pps;
     QByteArray avcc;    // VCL NAL units, each with a 4-byte big-endian length
+    bool idr = false;   // has an IDR slice
 };
 
 // x264 emits Annex-B: parameter sets travel separately on the wire, and SEI / AUD are dropped.

@@ -451,16 +451,20 @@ void MainController::beginSyncedVideoInterval(const ninjam::MessageGuid &audioGu
     videoEncoder.requestKeyFrame();
 }
 
-void MainController::sendSyncedVideoFrame(const QByteArray &annexB, bool isKeyFrame)
+void MainController::sendSyncedVideoFrame(const QByteArray &annexB)
 {
     if (!videoIntervalToUpload)
         return;
 
-    if (waitingVideoKeyFrame && !isKeyFrame)
+    const auto frame = NinjamZapVideoPacker::fromAnnexB(annexB);
+
+    // From the NAL units, not the encoder's flag: not every encoder sets it.
+    if (waitingVideoKeyFrame && !frame.idr)
         return;
     waitingVideoKeyFrame = false;
 
-    const auto frame = NinjamZapVideoPacker::fromAnnexB(annexB);
+    if (frame.idr && frame.sps.isEmpty())
+        qWarning() << "IDR without SPS/PPS from the video encoder";
 
     if (!videoParameterSetsSent && !frame.sps.isEmpty() && !frame.pps.isEmpty()) {
         sendVideoChunk(NinjamZapVideoPacker::parameterSets(frame.sps, frame.pps));
@@ -477,7 +481,7 @@ void MainController::enqueueVideoDataToUpload(const QByteArray &encodedData, boo
         return;
 
     if (sendingSyncedVideo) {
-        sendSyncedVideoFrame(encodedData, isFirstPart);
+        sendSyncedVideoFrame(encodedData);
         return;
     }
 

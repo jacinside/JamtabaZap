@@ -372,7 +372,7 @@ protected:
     quint32 videoIntervalCounter = 0;
     void beginSyncedVideoInterval(const ninjam::MessageGuid &audioGuid);
     void endSyncedVideoInterval();
-    void sendSyncedVideoFrame(const QByteArray &annexB, bool isKeyFrame);
+    void sendSyncedVideoFrame(const QByteArray &annexB);
     void sendVideoChunk(const QByteArray &chunk);
     bool isLowestIntervalAudioChannel(quint8 channelIndex) const;
     bool hasIntervalAudioToFollow() const;

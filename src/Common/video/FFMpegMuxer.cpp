@@ -253,8 +253,10 @@ bool FFMpegMuxer::finishCurrentInterval()
 
 bool FFMpegMuxer::addVideoStream(AVCodecID codecID, AVDictionary **opts)
 {
-    // find the encoder
-    codec = avcodec_find_encoder(codecID);
+    // find the encoder, preferring x264: its options below don't apply to the others
+    codec = avcodec_find_encoder_by_name("libx264");
+    if (!codec)
+        codec = avcodec_find_encoder(codecID);
     if (!codec) {
         qCritical() << "Could not find encoder for " << avcodec_get_name(codecID);
         return false;
@@ -471,6 +473,8 @@ bool FFMpegMuxer::openVideoCodec(AVCodec *codec, AVDictionary **opts)
         return false;
     }
 
+    qInfo() << "Video encoder:" << codec->name << "size" << codecContext->width << "x" << codecContext->height;
+
     int ret = avcodec_open2(codecContext, codec, opts); /* open the codec */
     if (ret < 0) {
         qCritical() << "Could not open video codec: " << av_error_to_qt_string(ret) << ret;
@@ -517,8 +521,13 @@ void FFMpegMuxer::imageToYuvPicture(const QImage &image, AVFrame *picture, int w
 
     picture->quality = 0;
 
-    // Filling AVFrame with YUV420P data
-    av_image_fill_arrays(picture->data, picture->linesize, pic_dat, AV_PIX_FMT_YUV420P, width, height, 1);
+    // Copying into the frame's own buffers: an encoder can read them after avcodec_send_frame returns.
+    uint8_t *sourceData[4];
+    int sourceLineSize[4];
+    av_image_fill_arrays(sourceData, sourceLineSize, pic_dat, AV_PIX_FMT_YUV420P, width, height, 1);
+    av_image_copy(picture->data, picture->linesize, const_cast<const uint8_t **>(sourceData), sourceLineSize,
+                  AV_PIX_FMT_YUV420P, width, height);
+    av_free(pic_dat);
 }
 
 void FFMpegMuxer::RGBtoYUV420P(const uint8_t *bufferRGB, uint8_t *bufferYUV, uint rgbIncrement, bool swapRGB, int width, int height)
@@ -632,9 +641,6 @@ bool FFMpegMuxer::doEncodeVideoFrame(const QImage &image)
     int ret = avcodec_send_frame(codecContext, (!image.isNull()) ? frame : nullptr);
 
     if (!image.isNull()) {
-        // releasing the allocated memory - fix https://github.com/elieserdejesus/JamTaba/issues/951
-        av_freep(frame);
-
         if (ret != 0 && ret != AVERROR_EOF) {
             qCritical() << "Error encoding video frame: " << av_error_to_qt_string(ret) << ret;
             return false;
@@ -666,5 +672,9 @@ bool FFMpegMuxer::doEncodeVideoFrame(const QImage &image)
 
     av_free_packet(&packet);
 
-    return true;
+    if (ret != AVERROR_EOF)
+        qCritical() << "Error receiving encoded video:" << av_error_to_qt_string(ret) << ret << "encoder" << codec->name;
+
+    // A failed packet doesn't end a session: the encoder stays open until the app closes it.
+    return continuousMode && !image.isNull() ? false : true;
 }

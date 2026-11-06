@@ -53,6 +53,7 @@ EncodedFrame fromAnnexB(const QByteArray &annexB)
             } else if (type == 8) {
                 frame.pps = nal;
             } else if (type >= 1 && type <= 5) {
+                frame.idr = frame.idr || type == 5;
                 appendBE32(frame.avcc, static_cast<quint32>(nal.size()));
                 frame.avcc.append(nal);
             }
