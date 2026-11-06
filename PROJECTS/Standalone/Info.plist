@@ -3,11 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleExecutable</key>
-	<string>Jamtaba2</string>
+	<string>JamtabaZap</string>
+	<key>CFBundleName</key>
+	<string>JamtabaZap</string>
 	<key>CFBundleIconFile</key>
 	<string>Jamtaba.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.ninjamzap.jamtaba-dev</string>
+	<string>com.ninjamzap.jamtabazap</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>LSMinimumSystemVersion</key>
@@ -15,8 +17,8 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Jamtaba uses the camera to send video to other musicians.</string>
+	<string>JamtabaZap uses the camera to send video to other musicians.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Jamtaba uses audio inputs to send your instrument to other musicians.</string>
+	<string>JamtabaZap uses audio inputs to send your instrument to other musicians.</string>
 </dict>
 </plist>

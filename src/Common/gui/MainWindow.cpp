@@ -103,7 +103,7 @@ MainWindow::MainWindow(MainController *mainController, QWidget *parent) :
 
     ui.setupUi(this);
 
-    setWindowTitle(QString("JamTaba (%1 bits)").arg(QSysInfo::WordSize));
+    setWindowTitle(QString("JamtabaZap (%1 bits)").arg(QSysInfo::WordSize));
 
     initializeLoginService();
     initializeMainTabWidget();

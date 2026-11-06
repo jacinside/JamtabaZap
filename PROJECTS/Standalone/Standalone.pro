@@ -1,4 +1,4 @@
-TARGET = Jamtaba2
+TARGET = JamtabaZap
 TEMPLATE = app
 
 include(../Jamtaba-common.pri)
