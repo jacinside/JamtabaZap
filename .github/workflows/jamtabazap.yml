@@ -15,6 +15,9 @@ jobs:
       image: defter/jamtaba-win64:v5.15.7
     steps:
       - uses: actions/checkout@v4
+      - name: FFmpeg with x264
+        shell: bash
+        run: .github/scripts/ffmpeg-with-x264.sh x86_64-w64-mingw32.static-
       - name: Build
         shell: bash
         run: |
@@ -23,6 +26,7 @@ jobs:
           qmake Standalone.pro CONFIG+=release
           make -k -j$(nproc)
           find . -name '*.exe'
+          grep -q libx264 release/JamtabaZap.exe || { echo "the executable has no libx264"; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
           name: JamtabaZap-windows-x64
@@ -35,6 +39,9 @@ jobs:
       image: defter/jamtaba-linux:v5.15.7
     steps:
       - uses: actions/checkout@v4
+      - name: FFmpeg with x264
+        shell: bash
+        run: .github/scripts/ffmpeg-with-x264.sh
       - name: Build
         shell: bash
         run: |
@@ -43,6 +50,7 @@ jobs:
           qmake Standalone.pro CONFIG+=release
           make -k -j$(nproc)
           find . -type f -name 'JamtabaZap*'
+          grep -q libx264 JamtabaZap || { echo "the executable has no libx264"; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
           name: JamtabaZap-linux-x64
