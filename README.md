@@ -1,3 +1,39 @@
+# JamtabaZap
+
+A fork of [JamTaba](https://github.com/elieserdejesus/JamTaba), based on [defterai's version](https://github.com/defterai/JamTaba), that sends and receives synchronized video using the [NinjamZap video format](https://github.com/jacinside/ninjamzap-core/blob/main/docs/VIDEO_SYNC.md). Musicians on JamtabaZap and on the NinjamZap apps can see each other in the same room.
+
+**Status: beta.** Download it from [Releases](https://github.com/jacinside/JamtabaZap/releases).
+
+## What it adds
+
+- H.264 video synchronized with each musician's audio interval, on servers that relay video. On other servers it falls back to JamTaba's previous video format, in SD.
+- Video quality in Preferences > Video: SD, VGA or HD. The same tab turns off receiving video.
+- Audio quality in Preferences > Audio: Economy, Standard, High or Studio (64, 128, 192 or 256 kbps).
+- Video kept in step with audio in voice chat.
+
+## Installing
+
+- **Windows:** unzip and run `JamtabaZap.exe`. It needs an ASIO driver; [ASIO4ALL](https://www.asio4all.org/) works if your interface has none. The build isn't signed, so Windows SmartScreen warns about it: choose "More info", then "Run anyway".
+- **macOS:** Intel build, which also runs on Apple Silicon through Rosetta. It isn't signed: right-click the app and choose "Open".
+- **Linux:** run the `JamtabaZap` executable.
+
+## Known limits
+
+- VST2 plugin hosting isn't included in this beta, nor is the VST/AU plugin version of JamTaba.
+- HD takes a lot of CPU on older computers. When the encoder can't keep up, frames are skipped: choose VGA or SD if your computer struggles.
+
+## Credits and license
+
+All credit for JamTaba goes to its author, Elieser de Jesus, and its contributors, and to defterai for the version this fork builds on. JamTaba has no license file ([issue #1210](https://github.com/elieserdejesus/JamTaba/issues/1210)), and this fork doesn't add one. The Steinberg VST2 SDK files that come with JamTaba have been removed here; they remain in the history inherited from the original repository.
+
+The commits on top of JamTaba are kept small so that they can be moved onto newer versions of it.
+
+Tests for the video are in [`tests/ninjamzap`](tests/ninjamzap).
+
+---
+
+The original JamTaba README follows.
+
 JamTaba 2
 
 [![Latest Release Version](https://img.shields.io/github/release/defterai/JamTaba?sort=date)](https://github.com/defterai/JamTaba/releases/latest)
