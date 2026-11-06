@@ -1,0 +1,80 @@
+name: Build JamtabaZap
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  workflow_dispatch:
+
+env:
+  JAMTABA_VERSION: 0.1.0-${{ github.run_number }}
+
+jobs:
+  windows-x64:
+    runs-on: ubuntu-latest
+    container:
+      image: defter/jamtaba-win64:v5.15.7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        shell: bash
+        run: |
+          which qmake; qmake -v
+          cd PROJECTS/Standalone
+          qmake Standalone.pro CONFIG+=release
+          make -j$(nproc)
+          find . -name '*.exe'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JamtabaZap-windows-x64
+          path: PROJECTS/Standalone/**/*.exe
+          if-no-files-found: error
+
+  linux-x64:
+    runs-on: ubuntu-latest
+    container:
+      image: defter/jamtaba-linux:v5.15.7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        shell: bash
+        run: |
+          which qmake; qmake -v
+          cd PROJECTS/Standalone
+          qmake Standalone.pro CONFIG+=release
+          make -j$(nproc)
+          find . -type f -name 'JamtabaZap*'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JamtabaZap-linux-x64
+          path: PROJECTS/Standalone/**/JamtabaZap
+          if-no-files-found: error
+
+  macos-x86_64:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rosetta
+        run: softwareupdate --install-rosetta --agree-to-license || true
+      - name: Qt and the static libraries
+        run: |
+          python3 -m venv .aqt && .aqt/bin/pip -q install aqtinstall
+          .aqt/bin/aqt install-qt mac desktop 5.15.2 clang_64 -O .qt
+          curl -sSL -o libs.zip 'https://www.dropbox.com/s/qckwsmaqlditwpb/JamTaba-static-libs.zip?dl=1'
+          echo '9e37dabea1daa59b34e76d26e2b6473af1613f6b0255c14bff3c87c4d0e5b997  libs.zip' | shasum -a 256 -c -
+          unzip -q libs.zip
+      - name: Build
+        run: |
+          Q=$PWD/.qt/5.15.2/clang_64/bin
+          mkdir build && cd build
+          arch -x86_64 $Q/qmake ../PROJECTS/Standalone/Standalone.pro CONFIG+=release CONFIG-=debug CONFIG+=sdk_no_version_check \
+            QMAKE_APPLE_DEVICE_ARCHS=x86_64 QMAKE_MACOSX_DEPLOYMENT_TARGET=10.15 "QMAKE_LIBS_OPENGL=-framework OpenGL" \
+            QMAKE_LFLAGS+=-Wl,-platform_version,macos,10.15,10.15
+          arch -x86_64 make -j$(sysctl -n hw.ncpu)
+          arch -x86_64 $Q/macdeployqt JamtabaZap.app
+          codesign --force --sign - --deep JamtabaZap.app
+          ditto -c -k --keepParent JamtabaZap.app JamtabaZap-macos-x86_64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JamtabaZap-macos-x86_64
+          path: build/JamtabaZap-macos-x86_64.zip
+          if-no-files-found: error
