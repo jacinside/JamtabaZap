@@ -209,7 +209,7 @@ class Sniffer(threading.Thread):
 
 
 class Jamtaba:
-    def __init__(self, workdir, name=USER, marks=True):
+    def __init__(self, workdir, name=USER, marks=True, extra_env=None):
         self.dir = os.path.join(workdir, name)
         data = os.path.join(self.dir, "home/Library/Application Support/JamTaba 2")
         os.makedirs(data)
@@ -225,7 +225,8 @@ class Jamtaba:
         env = dict(os.environ, HOME=os.path.join(self.dir, "home"), CFFIXED_USER_HOME=os.path.join(self.dir, "home"),
                    JT_TEST_CONTROL=self.control)
         if marks:
-            env["JT_TEST_AVMARKS"] = "1"
+            env["JT_TEST_AVMARKS"] = marks if isinstance(marks, str) else "1"
+        env.update(extra_env or {})
         self.proc = subprocess.Popen([APP], cwd=self.dir, env=env, stdout=open(self.log_path, "w"), stderr=subprocess.STDOUT)
         self.name = name
         time.sleep(6)
@@ -481,6 +482,51 @@ def s_legacy_server(ctx):
     types = frame_types(path)
     check(len(types) >= 40, f"the Annex-B stream decodes ({len(types)} frames)")
     check(not ctx.jt.errors(), "no encoder errors in Jamtaba's log")
+
+
+def flash_offsets(log):
+    events = [(m.group(1), int(m.group(2))) for m in re.finditer(r"JT_TEST (tone|toneoff|flash) (\d+)", log)]
+    tones, start = [], None
+    for kind, t in events:
+        if kind == "tone":
+            start = t
+        elif kind == "toneoff" and start is not None:
+            if 100 <= t - start <= 500:  # metronome clicks are much shorter
+                tones.append(start)
+            start = None
+    flashes = [t for kind, t in events if kind == "flash"]
+    return [f - min(tones, key=lambda x: abs(x - f)) for f in flashes] if tones else [], len(flashes), len(tones)
+
+
+def s_voice_chat_sync(ctx):
+    ctx.server = Server(ctx.dir)
+    ctx.sniff = Sniffer(ctx.server.port)
+    ctx.jt = Jamtaba(ctx.dir, name="receiver", marks=False)
+    sender = Jamtaba(ctx.dir, name=USER, marks="sparse")
+    ctx.cleanup.append(sender.stop)
+    ctx.jt.connect(ctx.server.port)
+    sender.connect(ctx.server.port)
+    sender.cmd("camera on")
+    check(ctx.sniff.wait_intervals(USER, "H264", 2), "the sender transmits video")
+    sender.cmd("voice on")
+    time.sleep(INTERVAL * 2)
+    check(ctx.sniff.channels[(USER, 0)]["flags"] == 2, "its audio is in voice chat")
+    mark = len(ctx.jt.log())
+    core = Sync(ctx.dir, ctx.server.port, 60)
+    time.sleep(60)
+    core.proc.wait(20)
+    log = ctx.jt.log()[mark:]
+    diffs, flashes, tones = flash_offsets(log)
+    print(f"    Jamtaba receiver: {flashes} flashes, {tones} tones, offsets ms {diffs}")
+    check(flashes >= 4 and tones >= 4, "marks in both")
+    med = statistics.median(diffs[1:])
+    ctx.metrics["jamtaba_median_ms"] = round(med)
+    core_diffs, nv, na, _ = offsets(os.path.join(ctx.dir, "sync"))
+    print(f"    core receiver: {nv} flashes, {na} tones, offsets ms {[round(d) for d in core_diffs]}")
+    if len(core_diffs) > 2:
+        ctx.metrics["core_median_ms"] = round(statistics.median(core_diffs[1:]))
+    check(abs(med) <= ctx.sync_limit_ms, f"Jamtaba shows it within {ctx.sync_limit_ms} ms of the audio ({med:.0f})")
+    check(not ctx.jt.errors() and not sender.errors(), "no errors")
 
 
 def s_receives_ninjamzap_video(ctx):
@@ -907,6 +953,7 @@ SCENARIOS = [
     ("receiver stall", s_receiver_stall),
     ("transmit off", s_transmit_off),
     ("voice chat", s_voice_chat),
+    ("voice chat sync", s_voice_chat_sync),
     ("video presets", s_video_presets),
     ("video preset change", s_video_preset_change),
     ("legacy server stays sd", s_legacy_server_stays_sd),

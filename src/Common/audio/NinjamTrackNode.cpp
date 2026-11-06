@@ -97,6 +97,8 @@ public:
     explicit IntervalDecoder(const QByteArray &vorbisData = QByteArray());
     void decode(quint32 maxSamplesToDecode);
     void addEncodedData(const QByteArray &vorbisData);
+    qint64 firstDataTime = 0;      // voice chat: when the first bytes arrived
+    bool latencyMeasured = false;
     quint32 getDecodedSamples(audio::SamplesBuffer &outBuffer, uint samplesToDecode);
     inline int getSampleRate() const { return vorbisDecoder.getSampleRate(); }
     inline bool isStereo() const { return vorbisDecoder.isStereo(); }
@@ -312,6 +314,8 @@ void NinjamTrackNode::addVorbisEncodedChunk(const QByteArray &chunkBytes, bool i
     }
 
 
+    if (!decoders.last()->firstDataTime)
+        decoders.last()->firstDataTime = QDateTime::currentMSecsSinceEpoch();
     decoders.last()->addEncodedData(chunkBytes);
 
     if (isLastPart) {
@@ -330,6 +334,7 @@ AudioIntervalState NinjamTrackNode::getAudioIntervalState()
     state.current = currentGuid;
     state.previous = previousGuid;
     state.queued = queuedGuids;
+    state.voiceChat = mode == VoiceChat;
     return state;
 }
 
@@ -424,7 +429,12 @@ void NinjamTrackNode::processReplacing(const audio::SamplesBuffer &in, audio::Sa
         internalInputBuffer.setFrameLenght(framesToProcess);
 
         if (decoder) {
-            decoder->getDecodedSamples(internalInputBuffer, framesToProcess);
+            const auto decodedFrames = decoder->getDecodedSamples(internalInputBuffer, framesToProcess);
+            if (mode == VoiceChat && decodedFrames > 0 && !decoder->latencyMeasured && decoder->firstDataTime) {
+                // how long this audio waited to be heard: what the video has to wait too
+                decoder->latencyMeasured = true;
+                voiceLatencyMs = static_cast<int>(QDateTime::currentMSecsSinceEpoch() - decoder->firstDataTime);
+            }
             if (mode == VoiceChat) { // in voice chat we will not wait until startInterval to use the next available downloaded decoder
                 if (framesToProcess >= 0 && decoder->isFullyDecoded()) {
                     //qDebug() << "current decoder consumed, using the next decoder";

@@ -47,6 +47,7 @@ public:
     bool isVideoChannel() const;
 
     AudioIntervalState getAudioIntervalState() const;
+    int getVoiceLatencyMs() const;
 
     static void setNetworkUsageUpdatePeriod(quint32 periodInMilliseconds);
 

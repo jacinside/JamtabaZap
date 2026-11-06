@@ -18,9 +18,13 @@ inline bool enabled()
     return on;
 }
 
-// 200 ms marks, every 2 s
+// 200 ms marks, every 2 s. JT_TEST_AVMARKS=sparse: only at the start of each interval, to tell
+// long delays from the next mark.
 inline bool isMarked(qint64 intervalPosition, int sampleRate)
 {
+    static const bool sparse = qgetenv("JT_TEST_AVMARKS") == "sparse";
+    if (sparse)
+        return intervalPosition < sampleRate / 5;
     return intervalPosition % (sampleRate * 2) < sampleRate / 5;
 }
 

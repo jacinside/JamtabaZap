@@ -215,6 +215,7 @@ void SyncedVideoStream::addData(const ninjam::MessageGuid &guid, const QByteArra
     auto interval = it.value();
     interval->pending += data;
     parse(*interval);
+    playIfLive();
 
     if (isLastPart) {
         interval->ended = true;
@@ -239,8 +240,19 @@ void SyncedVideoStream::parse(Interval &interval)
             interval.parameterSets = chunk;
         } else if (!chunk.isEmpty()) {
             interval.frames.append(chunk);
+            interval.arrivals.append(QDateTime::currentMSecsSinceEpoch());
         }
         interval.chunkIndex++;
+    }
+}
+
+void SyncedVideoStream::playIfLive()
+{
+    // Nothing to match it to: the sender's audio is in voice chat, or it isn't sending audio.
+    if (next && next->hasMarker && (audioIsLive || isZero(next->audioGuid))) {
+        next->live = true;
+        play(next, "LIVE");
+        next.reset();
     }
 }
 
@@ -263,6 +275,9 @@ void SyncedVideoStream::play(const IntervalPtr &interval, const char *match)
 
 void SyncedVideoStream::swap(const QList<AudioIntervalState> &audio)
 {
+    audioIsLive = !audio.isEmpty() && std::all_of(audio.begin(), audio.end(), [](const AudioIntervalState &a) { return a.voiceChat; });
+    playIfLive();
+
     const auto isCurrent = [&](const ninjam::MessageGuid &g) {
         return std::any_of(audio.begin(), audio.end(), [&](const AudioIntervalState &a) { return a.playing && a.current == g; });
     };
@@ -296,10 +311,7 @@ void SyncedVideoStream::swap(const QList<AudioIntervalState> &audio)
     const auto guid = next->audioGuid;
     if (!next->hasMarker)
         return; // the marker is still on its way
-    if (isZero(guid)) {
-        play(next, "NOAUDIO"); // voice chat or transmit off: there's no interval to match
-        next.reset();
-    } else if (isPrevious(guid)) {
+    if (isPrevious(guid)) {
         play(next, "PREV");
         next.reset();
     } else if (isCurrent(guid)) {
@@ -317,7 +329,7 @@ void SyncedVideoStream::swap(const QList<AudioIntervalState> &audio)
     }
 }
 
-void SyncedVideoStream::tick(double progress)
+void SyncedVideoStream::tick(double progress, int liveDelayMs)
 {
     const auto now = QDateTime::currentMSecsSinceEpoch();
     if (lastTick)
@@ -327,10 +339,17 @@ void SyncedVideoStream::tick(double progress)
     if (!playing || playing->frames.isEmpty())
         return;
 
-    // Evenly over the interval: by its own frame count once it's complete, until then by the last one's.
+    int target = 0;
     const int available = playing->frames.size();
-    const int expected = playing->ended ? available : qMax(lastFrameCount, available);
-    const int target = qMin(static_cast<int>(progress * expected) + 1, available);
+    if (playing->live) {
+        target = framesRequested;
+        while (target < available && playing->arrivals.at(target) + liveDelayMs <= now)
+            ++target;
+    } else {
+        // Evenly over the interval: by its own frame count once it's complete, until then by the last one's.
+        const int expected = playing->ended ? available : qMax(lastFrameCount, available);
+        target = qMin(static_cast<int>(progress * expected) + 1, available);
+    }
     if (target <= framesRequested)
         return;
 

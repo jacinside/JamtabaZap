@@ -3,6 +3,7 @@
 
 #include "core/AudioNode.h"
 #include <QByteArray>
+#include <atomic>
 #include "video/SyncedVideoStream.h"
 #include "SamplesBufferResampler.h"
 #include "readerwriterqueue.h"
@@ -34,6 +35,9 @@ public:
 
     // Which audio intervals this channel is playing, for matching video to them.
     AudioIntervalState getAudioIntervalState();
+
+    // Voice chat: how long received audio waits before it's heard.
+    int getVoiceLatencyMs() const { return voiceLatencyMs; }
     void addVorbisEncodedChunk(const QByteArray &chunkBytes, bool isFirstPart, bool isLastPart);
     void processReplacing(const audio::SamplesBuffer &in, audio::SamplesBuffer &out, int sampleRate,
                           std::vector<midi::MidiMessage> &midiBuffer) override;
@@ -105,6 +109,7 @@ private:
     ninjam::MessageGuid currentGuid;
     ninjam::MessageGuid previousGuid;
     bool playingGuid = false;
+    std::atomic_int voiceLatencyMs { 0 };
     std::shared_ptr<IntervalDecoder> currentDecoder;
     QMutex decodersMutex;
 

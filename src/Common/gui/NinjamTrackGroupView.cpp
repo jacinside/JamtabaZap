@@ -495,8 +495,13 @@ void NinjamTrackGroupView::updateGuiElements()
 
     // video
     auto ninjamController = mainController->getNinjamController();
-    if (ninjamController)
-        syncedVideo->tick(ninjamController->getIntervalProgress());
+    if (ninjamController) {
+        int liveDelayMs = 0;
+        visitTracks<NinjamTrackView>([&liveDelayMs](NinjamTrackView *track) {
+            liveDelayMs = qMax(liveDelayMs, track->getVoiceLatencyMs());
+        });
+        syncedVideo->tick(ninjamController->getIntervalProgress(), liveDelayMs);
+    }
 
     if (!decodedImages.isEmpty()) {
         quint64 now = QDateTime::currentMSecsSinceEpoch();

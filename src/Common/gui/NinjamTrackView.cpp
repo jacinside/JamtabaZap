@@ -262,6 +262,12 @@ AudioIntervalState NinjamTrackView::getAudioIntervalState() const
     return node ? node->getAudioIntervalState() : AudioIntervalState();
 }
 
+int NinjamTrackView::getVoiceLatencyMs() const
+{
+    auto node = getTrackNode();
+    return node ? node->getVoiceLatencyMs() : 0;
+}
+
 bool NinjamTrackView::isVideoChannel() const
 {
     return instrumentsButton->getSelectedIcon() == static_cast<int>(InstrumentIndex::Video);
