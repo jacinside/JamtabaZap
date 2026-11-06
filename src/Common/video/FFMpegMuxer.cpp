@@ -293,6 +293,7 @@ bool FFMpegMuxer::addVideoStream(AVCodecID codecID, AVDictionary **opts)
             av_dict_set(opts, "tune", "zerolatency", 0);
             av_dict_set(opts, "profile", "baseline", 0);
             av_dict_set(opts, "forced-idr", "1", 0);
+            av_dict_set(opts, "x264-params", "scenecut=0", 0); // key frames only at the interval start
         }
     }
 

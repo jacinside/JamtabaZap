@@ -950,7 +950,8 @@ void MainWindow::loadPreset(const Preset &preset)
 
         //set all loaded channels xmit to ON
         for (auto trackGroupView : qAsConst(localGroupChannels)) {
-            mainController->setTransmitingStatus(trackGroupView->getChannelIndex(), true);
+            if (!trackGroupView->isVideoChannel())
+                mainController->setTransmitingStatus(trackGroupView->getChannelIndex(), true);
         }
 
         QApplication::processEvents();

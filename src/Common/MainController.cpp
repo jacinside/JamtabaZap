@@ -235,6 +235,10 @@ void MainController::connectInNinjamServer(const ServerInfo &server)
     videoIntervalToUpload.reset();
     videoIntervalCounter = 0;
 
+    // The channels were announced before knowing this: a camera already on makes a video channel.
+    if (mainWindow && ninjamService)
+        ninjamService->sendNewChannelsListToServer(mainWindow->getChannelsMetadata());
+
     qCDebug(jtCore) << "connected in ninjam server";
 
     stopNinjamController();
@@ -286,6 +290,15 @@ void MainController::handleNewNinjamInterval()
 
     if (mainWindow->cameraIsActivated())
         videoEncoder.startNewInterval();
+
+    // Without interval-mode audio to follow (transmit off, voice chat) the boundary drives the
+    // video, whose marker then names no audio.
+    if (sendingSyncedVideo && ninjamController && ninjamController->isPreparedForTransmit() && !hasIntervalAudioToFollow()) {
+        if (mainWindow->cameraIsActivated())
+            beginSyncedVideoInterval(ninjam::MessageGuid{});
+        else
+            endSyncedVideoInterval();
+    }
 }
 
 void MainController::processCapturedFrame(int frameID, const QImage &frame)
@@ -380,6 +393,15 @@ void MainController::enqueueAudioDataToUpload(const QByteArray &encodedData, qui
         for (auto jamRecorder : getActiveRecorders())
             jamRecorder->appendLocalUserAudio(encodedData, channelIndex, isFirstPart);
     }
+}
+
+bool MainController::hasIntervalAudioToFollow() const
+{
+    for (auto it = trackGroups.constBegin(); it != trackGroups.constEnd(); ++it) {
+        if (isTransmiting(it.key()) && !isVoiceChatActivated(it.key()))
+            return true;
+    }
+    return false;
 }
 
 bool MainController::isLowestIntervalAudioChannel(quint8 channelIndex) const

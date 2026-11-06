@@ -375,6 +375,7 @@ protected:
     void sendSyncedVideoFrame(const QByteArray &annexB, bool isKeyFrame);
     void sendVideoChunk(const QByteArray &chunk);
     bool isLowestIntervalAudioChannel(quint8 channelIndex) const;
+    bool hasIntervalAudioToFollow() const;
 
     mutable QMutex mutex;
 

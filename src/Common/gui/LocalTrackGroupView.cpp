@@ -68,6 +68,7 @@ void LocalTrackGroupView::setAsVideoChannel()
     instrumentsButton->setVisible(!peakMeterOnly);
     xmitButton->setChecked(false);
     xmitButton->setVisible(false);
+    mainWindow->setTransmitingStatus(getChannelIndex(), false); // the button ignores changes while preparing
 
     visitTracks<LocalTrackView>([&](LocalTrackView *track) {
         track->setVisible(false);
