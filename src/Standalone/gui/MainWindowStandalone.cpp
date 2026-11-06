@@ -76,8 +76,10 @@ void MainWindowStandalone::tryClose() // this function is called when ESC is pre
     if (!mainController)
         return;
 
-    if (mainController->isPlayingInNinjamRoom())
+    if (mainController->isPlayingInNinjamRoom()) {
+        qInfo() << "Leaving the room: Esc pressed";
         mainController->stopNinjamController(); // exit from server if user is jamming
+    }
     else
         close(); // close JamTaba if user is not jamming
 }
