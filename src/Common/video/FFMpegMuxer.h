@@ -7,6 +7,7 @@
 #include <QFile>
 #include <QDebug>
 #include <QThreadPool>
+#include <atomic>
 
 #include "FFMpegCommon.h"
 
@@ -23,6 +24,11 @@ public:
     ~FFMpegMuxer();
 
     void finish();
+
+    // One encoder for the whole session, an IDR on request and no frame reordering, as
+    // synchronized video needs. dataEncoded's second parameter then means "key frame".
+    void setContinuousMode(bool continuous);
+    void requestKeyFrame();
 
     void encodeImage(const QImage &image, bool async = true);
     void encodeAudioFrame();
@@ -102,6 +108,8 @@ private:
 
     bool initialized;
     bool startNewIntervalRequested;
+    bool continuousMode;
+    std::atomic_bool keyFrameRequested;
 
     QThreadPool threadPool;
 };

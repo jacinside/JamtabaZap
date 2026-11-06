@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleExecutable</key>
+	<string>Jamtaba2</string>
+	<key>CFBundleIconFile</key>
+	<string>Jamtaba.icns</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.ninjamzap.jamtaba-dev</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>10.15</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Jamtaba uses the camera to send video to other musicians.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Jamtaba uses audio inputs to send your instrument to other musicians.</string>
+</dict>
+</plist>

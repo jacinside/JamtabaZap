@@ -55,6 +55,10 @@ namespace client
         // audio interval upload
         void sendIntervalPart(const MessageGuid &GUID, const QByteArray &encodedAudioBuffer, bool isLastPart);
         void sendIntervalBegin(const MessageGuid &GUID, quint8 channelIndex, bool isAudioInterval);
+        void sendVideoIntervalBegin(const MessageGuid &GUID, quint8 channelIndex);
+
+        // server_caps bit 1: the server relays video channels (AllowVideoChannels)
+        inline bool serverSupportsVideo() const { return serverCapabilities & 0x02; }
 
         void sendNewChannelsListToServer(const QList<ChannelMetadata> &channelsMetadata);
         void sendRemovedChannelIndex(int removedChannelIndex);
@@ -130,6 +134,7 @@ namespace client
         long lastSendTime; // time stamp of last send
         long serverKeepAlivePeriod;
         QString serverLicence;
+        quint32 serverCapabilities = 0;
 
         QScopedPointer<ServerInfo> currentServer;
 

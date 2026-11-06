@@ -120,7 +120,7 @@ ClientSetChannel::ClientSetChannel(const QList<ninjam::client::ChannelMetadata> 
     ClientSetChannel()
 {
     for (const auto& channel : channels) {
-        quint8 flags = channel.voiceChatActivated ? 2 : 0;  //Possible values: 0 - ninjam interval based , 2 - voice chat, 4 - session mode
+        quint8 flags = toFlags(channel.voiceChatActivated, channel.videoChannel);  //Possible values: 0 - ninjam interval based , 2 - voice chat, 4 - session mode
         addChannel(channel.name, flags, true);
     }
 }
@@ -404,6 +404,15 @@ UploadIntervalBegin::UploadIntervalBegin() :
     ClientMessage(MessageType::UploadIntervalBegin)
 {
 
+}
+
+UploadIntervalBegin::UploadIntervalBegin(const MessageGuid &GUID, quint8 channelIndex, const MessageFourCC &fourCC) :
+    ClientMessage(MessageType::UploadIntervalBegin),
+    GUID(GUID),
+    estimatedSize(0),
+    fourCC(fourCC),
+    channelIndex(channelIndex)
+{
 }
 
 UploadIntervalBegin::UploadIntervalBegin(const MessageGuid &GUID, quint8 channelIndex, bool isAudioInterval) :

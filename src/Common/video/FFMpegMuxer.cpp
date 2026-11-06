@@ -90,7 +90,9 @@ FFMpegMuxer::FFMpegMuxer(QObject *parent) :
       videoFrameRate(25),
       videoBitRate(static_cast<uint>(FFMpegMuxer::VideoQualityMedium)),
       initialized(false),
-      startNewIntervalRequested(false)
+      startNewIntervalRequested(false),
+      continuousMode(false),
+      keyFrameRequested(false)
 {
     av_register_all();
 
@@ -155,7 +157,20 @@ void FFMpegMuxer::encodeAudioFrame()
 
 void FFMpegMuxer::startNewInterval()
 {
+    if (continuousMode && initialized)
+        return; // the interval boundary only asks for a key frame in this mode
+
     startNewIntervalRequested = true;
+}
+
+void FFMpegMuxer::setContinuousMode(bool continuous)
+{
+    continuousMode = continuous;
+}
+
+void FFMpegMuxer::requestKeyFrame()
+{
+    keyFrameRequested = true;
 }
 
 bool FFMpegMuxer::prepareToEncodeNewInterval()
@@ -264,7 +279,7 @@ bool FFMpegMuxer::addVideoStream(AVCodecID codecID, AVDictionary **opts)
          * identical to 1. */
     codecContext->time_base = AVRational{ 1, static_cast<int>(videoFrameRate) };
 
-    codecContext->gop_size = 30; // emit one intra frame every N frames at most
+    codecContext->gop_size = continuousMode ? 3000 : 30; // emit one intra frame every N frames at most
     codecContext->pix_fmt = AV_PIX_FMT_YUV420P;
 
     if (codecContext->codec_id == AV_CODEC_ID_H264) {
@@ -272,6 +287,12 @@ bool FFMpegMuxer::addVideoStream(AVCodecID codecID, AVDictionary **opts)
         if (ret != 0) {
             qCritical() << "Error setting h264 preset" << av_error_to_qt_string(ret) << ret;
             return false;
+        }
+
+        if (continuousMode) {
+            av_dict_set(opts, "tune", "zerolatency", 0);
+            av_dict_set(opts, "profile", "baseline", 0);
+            av_dict_set(opts, "forced-idr", "1", 0);
         }
     }
 
@@ -604,6 +625,8 @@ bool FFMpegMuxer::doEncodeVideoFrame(const QImage &image)
     if (!image.isNull())
         fillFrameWithImageData(image);
 
+    frame->pict_type = (!image.isNull() && keyFrameRequested.exchange(false)) ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_NONE;
+
     // send the image to encoder, send nullpr if finishing
     int ret = avcodec_send_frame(codecContext, (!image.isNull()) ? frame : nullptr);
 
@@ -630,7 +653,7 @@ bool FFMpegMuxer::doEncodeVideoFrame(const QImage &image)
     if (ret == 0 || ret == AVERROR(EAGAIN)) {
         if (ret == 0) { // we have a decoded frame?
             QByteArray encodedBytes(reinterpret_cast<const char*>(packet.data), packet.size);
-            bool isFirstPacket = encodedFrames == 0;
+            bool isFirstPacket = continuousMode ? (packet.flags & AV_PKT_FLAG_KEY) != 0 : encodedFrames == 0;
             emit dataEncoded(encodedBytes, isFirstPacket);
             encodedFrames++;
             av_packet_unref(&packet);

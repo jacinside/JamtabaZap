@@ -84,6 +84,8 @@ win32{
     SOURCES += audio/WindowsPortAudioDriver.cpp
     SOURCES += vst/WindowsVstPluginChecker.cpp
 }
+macx: QMAKE_INFO_PLIST = $$PWD/Info.plist
+
 macx{
 
     AU_SDK_PATH = "$$PWD/../../AU_SDK"

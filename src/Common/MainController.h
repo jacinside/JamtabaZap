@@ -128,6 +128,7 @@ public:
 
     void setVoiceChatStatus(int channelID, bool voiceChat);
     bool isVoiceChatActivated(int channelID) const;
+    inline bool isSendingSyncedVideo() const { return sendingSyncedVideo; }
 
     void setTransmitingStatus(int channelID, bool transmiting);
     bool isTransmiting(int channelID) const;
@@ -363,6 +364,17 @@ protected:
     // map the input channel indexes to a GUID (used to upload audio to ninjam server)
     QMap<quint8, UploadIntervalData> audioIntervalsToUpload;
     QScopedPointer<UploadIntervalData> videoIntervalToUpload;
+
+    // synchronized video (ninjamzap-core docs/VIDEO_SYNC.md), when the server relays video
+    bool sendingSyncedVideo = false;
+    bool waitingVideoKeyFrame = false;
+    bool videoParameterSetsSent = false;
+    quint32 videoIntervalCounter = 0;
+    void beginSyncedVideoInterval(const ninjam::MessageGuid &audioGuid);
+    void endSyncedVideoInterval();
+    void sendSyncedVideoFrame(const QByteArray &annexB, bool isKeyFrame);
+    void sendVideoChunk(const QByteArray &chunk);
+    bool isLowestIntervalAudioChannel(quint8 channelIndex) const;
 
     mutable QMutex mutex;
 

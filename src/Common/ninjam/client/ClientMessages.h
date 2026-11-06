@@ -73,9 +73,9 @@ public:
         return channels;
     }
 
-    static quint8 toFlags(bool voiceChatActivated) {
-         //Possible values: 0 - ninjam interval based , 2 - voice chat, 4 - session mode
-        return voiceChatActivated ? 2 : 0;
+    static quint8 toFlags(bool voiceChatActivated, bool videoChannel = false) {
+         //Possible values: 0 - ninjam interval based , 2 - voice chat, 4 - session mode, 0x10 - video only
+        return videoChannel ? 0x10 : (voiceChatActivated ? 2 : 0);
     }
 private:
     QList<UserChannel> channels;
@@ -158,6 +158,7 @@ class UploadIntervalBegin : public ClientMessage
 public:
     UploadIntervalBegin();
     UploadIntervalBegin(const MessageGuid &GUID, quint8 channelIndex, bool isAudioInterval);
+    UploadIntervalBegin(const MessageGuid &GUID, quint8 channelIndex, const MessageFourCC &fourCC);
 
     quint32 getSerializePayload() const override;
     bool serializeTo(NinjamOutputDataStream& stream) const override;

@@ -370,6 +370,9 @@ void MainWindow::changeCameraStatus(bool activated)
             }
 
             secondChannel->setAsVideoChannel();
+
+            if (mainController->isPlayingInNinjamRoom())
+                mainController->sendNewChannelsNames(getChannelsMetadata()); // the channel is now video-only
         }
     }
 
@@ -1309,6 +1312,7 @@ QList<ninjam::client::ChannelMetadata> MainWindow::getChannelsMetadata() const
         ninjam::client::ChannelMetadata channelData;
         channelData.name = channelGroup->getChannelGroupName();
         channelData.voiceChatActivated = mainController->isVoiceChatActivated(channelGroup->getChannelIndex());
+        channelData.videoChannel = channelGroup->isVideoChannel() && mainController->isSendingSyncedVideo();
         channelsMetadata.append(channelData);
     }
 

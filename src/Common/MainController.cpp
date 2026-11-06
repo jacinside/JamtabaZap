@@ -5,6 +5,7 @@
 #endif
 
 #include "MainController.h"
+#include "video/NinjamZapVideoPacker.h"
 #include "NinjamController.h"
 #include "Utils.h"
 #include "loginserver/natmap.h"
@@ -229,6 +230,11 @@ void MainController::setupNinjamControllerSignals()
 
 void MainController::connectInNinjamServer(const ServerInfo &server)
 {
+    sendingSyncedVideo = ninjamService && ninjamService->serverSupportsVideo();
+    videoEncoder.setContinuousMode(sendingSyncedVideo);
+    videoIntervalToUpload.reset();
+    videoIntervalCounter = 0;
+
     qCDebug(jtCore) << "connected in ninjam server";
 
     stopNinjamController();
@@ -340,6 +346,14 @@ void MainController::enqueueAudioDataToUpload(const QByteArray &encodedData, qui
 
             // flush the end of previous interval
             ninjamService->sendIntervalPart(audioInterval.getGUID(), audioInterval.getData(), true); // is the last part of interval
+
+            // the video of this interval names the audio interval that just ended
+            if (sendingSyncedVideo && isLowestIntervalAudioChannel(channelIndex)) {
+                if (mainWindow->cameraIsActivated())
+                    beginSyncedVideoInterval(audioInterval.getGUID());
+                else
+                    endSyncedVideoInterval();
+            }
         }
 
         UploadIntervalData newInterval; // generate a new GUID
@@ -368,10 +382,78 @@ void MainController::enqueueAudioDataToUpload(const QByteArray &encodedData, qui
     }
 }
 
+bool MainController::isLowestIntervalAudioChannel(quint8 channelIndex) const
+{
+    if (isVoiceChatActivated(channelIndex))
+        return false;
+
+    for (auto other : audioIntervalsToUpload.keys()) {
+        if (other < channelIndex && !isVoiceChatActivated(other))
+            return false;
+    }
+    return true;
+}
+
+void MainController::sendVideoChunk(const QByteArray &chunk)
+{
+    for (const auto &piece : NinjamZapVideoPacker::fragments(chunk))
+        ninjamService->sendIntervalPart(videoIntervalToUpload->getGUID(), piece, false);
+}
+
+void MainController::endSyncedVideoInterval()
+{
+    if (videoIntervalToUpload) {
+        ninjamService->sendIntervalPart(videoIntervalToUpload->getGUID(), QByteArray(), true);
+        videoIntervalToUpload.reset();
+    }
+}
+
+void MainController::beginSyncedVideoInterval(const ninjam::MessageGuid &audioGuid)
+{
+    endSyncedVideoInterval();
+
+    videoIntervalToUpload.reset(new UploadIntervalData()); // generate a new GUID
+
+    static const auto videoChannelIndex = 1;
+    ninjamService->sendVideoIntervalBegin(videoIntervalToUpload->getGUID(), videoChannelIndex);
+    sendVideoChunk(NinjamZapVideoPacker::syncMarker(videoIntervalCounter++, audioGuid));
+
+    // Packets already in the encoder belong to the previous interval's GOP: the interval
+    // starts at the first key frame encoded from now on.
+    waitingVideoKeyFrame = true;
+    videoParameterSetsSent = false;
+    videoEncoder.requestKeyFrame();
+}
+
+void MainController::sendSyncedVideoFrame(const QByteArray &annexB, bool isKeyFrame)
+{
+    if (!videoIntervalToUpload)
+        return;
+
+    if (waitingVideoKeyFrame && !isKeyFrame)
+        return;
+    waitingVideoKeyFrame = false;
+
+    const auto frame = NinjamZapVideoPacker::fromAnnexB(annexB);
+
+    if (!videoParameterSetsSent && !frame.sps.isEmpty() && !frame.pps.isEmpty()) {
+        sendVideoChunk(NinjamZapVideoPacker::parameterSets(frame.sps, frame.pps));
+        videoParameterSetsSent = true;
+    }
+
+    if (!frame.avcc.isEmpty())
+        sendVideoChunk(NinjamZapVideoPacker::frameChunk(frame.avcc));
+}
+
 void MainController::enqueueVideoDataToUpload(const QByteArray &encodedData, bool isFirstPart)
 {
     if (!ninjamService)
         return;
+
+    if (sendingSyncedVideo) {
+        sendSyncedVideoFrame(encodedData, isFirstPart);
+        return;
+    }
 
     if (isFirstPart) {
         if (videoIntervalToUpload) {

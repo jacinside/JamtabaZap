@@ -487,7 +487,7 @@ bool DownloadIntervalBegin::isAudio() const
 
 bool DownloadIntervalBegin::isVideo() const
 {
-   return !isAudio();
+   return fourCC == MessageFourCC{{'J', 'T', 'B', 'v'}};
 }
 
 quint32 DownloadIntervalBegin::getSerializePayload() const

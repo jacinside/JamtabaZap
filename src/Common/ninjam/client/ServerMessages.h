@@ -54,6 +54,7 @@ public:
     QByteArray getChallenge() const;
     quint32 getProtocolVersion() const;
     quint32 getServerKeepAlivePeriod() const;
+    inline quint32 getServerCapabilities() const { return serverCapabilities; }
     bool serverHasLicenceAgreement() const;
     QString getLicenceAgreement() const;
 

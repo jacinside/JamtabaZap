@@ -10,6 +10,7 @@ namespace ninjam {
         struct ChannelMetadata {
             QString name;
             bool voiceChatActivated = false;
+            bool videoChannel = false;
         };
     }
 }

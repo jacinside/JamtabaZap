@@ -132,6 +132,15 @@ void Service::sendIntervalPart(const MessageGuid &GUID, const QByteArray &encode
     sendMessageToServer(msg);
 }
 
+void Service::sendVideoIntervalBegin(const MessageGuid &GUID, quint8 channelIndex)
+{
+    if (!initialized)
+        return;
+
+    auto msg = UploadIntervalBegin(GUID, channelIndex, MessageFourCC{{'H', '2', '6', '4'}});
+    sendMessageToServer(msg);
+}
+
 void Service::sendIntervalBegin(const MessageGuid &GUID, quint8 channelIndex, bool isAudioInterval)
 {
     if (!initialized)
@@ -293,7 +302,12 @@ void Service::process(const UserInfoChangeNotifyMessage &msg)
     for (auto iterator = msg.getUsers().keyBegin();
          iterator != msg.getUsers().keyEnd(); ++iterator) {
         const auto& userFullName = *iterator;
-        const auto& channels = msg.getUsers().values(userFullName);
+        // Video-only channels (flag 0x10) can't be shown here: not subscribing saves their download.
+        QList<UserChannel> channels;
+        for (const UserChannel &channel : msg.getUsers().values(userFullName)) {
+            if (!(static_cast<quint8>(channel.getFlags()) & 0x10))
+                channels.append(channel);
+        }
         handleUserChannels(userFullName, channels);
         // enable receive for all user channels
         for (const UserChannel &channel : channels) {
@@ -378,6 +392,7 @@ void Service::process(const AuthChallengeMessage &msg)
     sendMessageToServer(msgAuthUser);
     serverLicence = msg.getLicenceAgreement();
     serverKeepAlivePeriod = msg.getServerKeepAlivePeriod();
+    serverCapabilities = msg.getServerCapabilities();
 }
 
 void Service::sendNewChannelsListToServer(const QList<ChannelMetadata> &channels)
@@ -386,7 +401,7 @@ void Service::sendNewChannelsListToServer(const QList<ChannelMetadata> &channels
 
     ClientSetChannel msg;
     for (const auto& channelMetadata : channels) {
-        msg.addChannel(channelMetadata.name, ClientSetChannel::toFlags(channelMetadata.voiceChatActivated));
+        msg.addChannel(channelMetadata.name, ClientSetChannel::toFlags(channelMetadata.voiceChatActivated, channelMetadata.videoChannel));
     }
 
     sendMessageToServer(msg);
