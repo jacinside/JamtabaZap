@@ -63,6 +63,10 @@ void PreferencesDialogStandalone::populateAllTabs()
     populateMidiTab();
 
     populateVstTab();
+
+#ifdef JT_NO_VST2
+    ui->prefsTab->removeTab(ui->prefsTab->indexOf(ui->tabVST));
+#endif
 }
 
 void PreferencesDialogStandalone::setupSignals()

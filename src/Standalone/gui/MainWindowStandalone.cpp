@@ -7,7 +7,10 @@
 #include "log/Logging.h"
 #include "audio/core/PluginDescriptor.h"
 #include "vst/VstPluginFinder.h"
+#include "audio/core/Plugins.h"
+#ifndef JT_NO_VST2
 #include "vst/VstPlugin.h"
+#endif
 
 #include <QTimer>
 #include <QDesktopWidget>

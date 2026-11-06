@@ -4,8 +4,10 @@
 #include "midi/MidiMessage.h"
 #include "audio/PortAudioDriver.h"
 #include "audio/core/LocalInputNode.h"
+#ifndef JT_NO_VST2
 #include "vst/VstPlugin.h"
 #include "vst/VstHost.h"
+#endif
 #include "vst/VstPluginFinder.h"
 #include "audio/core/PluginDescriptor.h"
 #include "NinjamController.h"
@@ -416,24 +418,34 @@ MainControllerStandalone::MainControllerStandalone(persistence::Settings setting
 {
     application->setQuitOnLastWindowClosed(true);
 
+#ifndef JT_NO_VST2
     hosts.append(vst::VstHost::getInstance());
+#endif
 #ifdef Q_OS_MAC
     hosts.append(au::AudioUnitHost::getInstance());
 #endif
 
+#ifndef JT_NO_VST2
     connect(vst::VstHost::getInstance(), &vst::VstHost::pluginRequestingWindowResize,
             this, &MainControllerStandalone::setVstPluginWindowSize);
+#endif
 }
 
 void MainControllerStandalone::setVstPluginWindowSize(QString pluginName, int newWidht,
                                                       int newHeight)
 {
+#ifndef JT_NO_VST2
     auto pluginEditorWindow = vst::VstPlugin::getPluginEditorWindow(pluginName);
     if (pluginEditorWindow)
     {
         pluginEditorWindow->setFixedSize(newWidht, newHeight);
         // pluginEditorWindow->updateGeometry();
     }
+#else
+    Q_UNUSED(pluginName)
+    Q_UNUSED(newWidht)
+    Q_UNUSED(newHeight)
+#endif
 }
 
 void MainControllerStandalone::start()
@@ -543,11 +555,13 @@ QSharedPointer<audio::Plugin> MainControllerStandalone::createPluginInstance(
         if (descriptor.getName() == "Delay")
             return QSharedPointer<audio::JamtabaDelay>::create(audioDriver->getSampleRate());
     }
+#ifndef JT_NO_VST2
     else if (descriptor.isVST())
     {
         auto host = vst::VstHost::getInstance();
         return vst::VstPlugin::load(host, descriptor);
     }
+#endif
 
 #ifdef Q_OS_MAC
 
@@ -628,6 +642,10 @@ void MainControllerStandalone::addDefaultPluginsScanPath()
 
 bool MainControllerStandalone::vstScanIsNeeded() const
 {
+#ifdef JT_NO_VST2
+    return false;
+#endif
+
     bool vstCacheIsEmpty = settings.getVstPluginsPaths().isEmpty();
     if (vstCacheIsEmpty)
         return true;
@@ -701,6 +719,11 @@ void MainControllerStandalone::scanOnlyNewVstPlugins()
 
 void MainControllerStandalone::scanVstPlugins(bool scanOnlyNewPlugins)
 {
+#ifdef JT_NO_VST2
+    Q_UNUSED(scanOnlyNewPlugins)
+    return;
+#endif
+
     if (vstPluginFinder)
     {
         if (!scanOnlyNewPlugins)

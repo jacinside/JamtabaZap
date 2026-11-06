@@ -1,6 +1,17 @@
 TARGET = JamtabaZap
 TEMPLATE = app
 
+# VST2 plugin hosting needs Steinberg's SDK, which can't be redistributed.
+# Build with CONFIG-=no_vst2 and a VST2 SDK in VST_SDK/ to bring it back.
+CONFIG += no_vst2
+no_vst2 {
+    DEFINES += JT_NO_VST2
+} else {
+    INCLUDEPATH += $$VST_SDK_PATH/VST2_SDK/pluginterfaces/vst2.x
+    HEADERS += vst/VstPlugin.h vst/VstHost.h vst/VstLoader.h vst/Utils.h
+    SOURCES += vst/VstPlugin.cpp vst/VstHost.cpp vst/Utils.cpp vst/VstLoader.cpp
+}
+
 include(../Jamtaba-common.pri)
 include(../Jamtaba-translations.pri)
 
@@ -21,7 +32,6 @@ INCLUDEPATH += $$SOURCE_PATH/Standalone
 
 INCLUDEPATH += $$SOURCE_PATH/Standalone/gui
 
-INCLUDEPATH += $$VST_SDK_PATH/VST2_SDK/pluginterfaces/vst2.x
 
 HEADERS += MainControllerStandalone.h
 HEADERS += gui/MainWindowStandalone.h
@@ -37,12 +47,8 @@ HEADERS += gui/CrashReportDialog.h
 HEADERS += audio/PortAudioDriver.h
 HEADERS += audio/Host.h
 HEADERS += midi/RtMidiDriver.h
-HEADERS += vst/VstPlugin.h
-HEADERS += vst/VstHost.h
-HEADERS += vst/VstLoader.h
 HEADERS += PluginFinder.h
 HEADERS += vst/VstPluginFinder.h
-HEADERS += vst/Utils.h
 HEADERS += Libs/SingleApplication/singleapplication.h
 HEADERS += Libs/RtMidi/RtMidi.h
 
@@ -61,12 +67,8 @@ SOURCES += gui/FxPanel.cpp
 SOURCES += gui/FxPanelItem.cpp
 SOURCES += gui/MidiToolsDialog.cpp
 SOURCES += midi/RtMidiDriver.cpp
-SOURCES += vst/VstPlugin.cpp
-SOURCES += vst/VstHost.cpp
 SOURCES += PluginFinder.cpp
 SOURCES += vst/VstPluginFinder.cpp
-SOURCES += vst/Utils.cpp
-SOURCES += vst/VstLoader.cpp
 SOURCES += Libs/SingleApplication/singleapplication.cpp
 SOURCES += Libs/RtMidi/RtMidi.cpp
 SOURCES += audio/PortAudioDriver.cpp
