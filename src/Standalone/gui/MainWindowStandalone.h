@@ -37,6 +37,8 @@ public:
     }
 
 protected:
+    bool runPlatformTestCommand(const QStringList &args) override;
+
     void closeEvent(QCloseEvent *) override;
 
     TextEditorModifier *createTextEditorModifier() override;
@@ -74,6 +76,8 @@ private slots:
     void tryClose(); // called when ESC is pressed
 
 private:
+    QSharedPointer<audio::Plugin> testPlugin;
+
     MainControllerStandalone *controller;
     PluginScanDialog *pluginScanDialog;
 

@@ -230,7 +230,16 @@ void VstPlugin::process(const audio::SamplesBuffer &in, audio::SamplesBuffer &ou
     }
 
     if (wantMidi) {
-        fillVstEventsList(midiBuffer); // translate midiBuffer messages in VstEvents
+        static const bool testNotes = qEnvironmentVariableIsSet("JT_TEST_VST_NOTES");
+        static int testBlocks = 0;
+        if (testNotes && ++testBlocks % 100 == 0) {
+            const char noteOn[4] = { char(0x90), 60, 100, 0 };
+            auto withNote = midiBuffer;
+            withNote.push_back(midi::MidiMessage::fromArray(noteOn));
+            fillVstEventsList(withNote);
+        } else {
+            fillVstEventsList(midiBuffer); // translate midiBuffer messages in VstEvents
+        }
         effect->dispatcher(effect, effProcessEvents, 0, 0, (void*)&vstMidiEvents, 0);
     }
 

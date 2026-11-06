@@ -224,6 +224,7 @@ class Jamtaba:
         self.log_path = os.path.join(workdir, f"{name}.log")
         env = dict(os.environ, HOME=os.path.join(self.dir, "home"), CFFIXED_USER_HOME=os.path.join(self.dir, "home"),
                    JT_TEST_CONTROL=self.control)
+        env["QT_MAC_DISABLE_FOREGROUND_APPLICATION_TRANSFORM"] = "1"
         if marks:
             env["JT_TEST_AVMARKS"] = marks if isinstance(marks, str) else "1"
         env.update(extra_env or {})
@@ -527,6 +528,122 @@ def s_voice_chat_sync(ctx):
         ctx.metrics["core_median_ms"] = round(statistics.median(core_diffs[1:]))
     check(abs(med) <= ctx.sync_limit_ms, f"Jamtaba shows it within {ctx.sync_limit_ms} ms of the audio ({med:.0f})")
     check(not ctx.jt.errors() and not sender.errors(), "no errors")
+
+
+def peak_db(ctx, payload, name):
+    path = os.path.join(ctx.dir, name)
+    with open(path, "wb") as f:
+        f.write(payload)
+    out = subprocess.run(["ffmpeg", "-v", "info", "-nostdin", "-i", path, "-af", "volumedetect", "-f", "null", "-"], capture_output=True, text=True).stderr
+    m = re.search(r"max_volume: (-?[\d.]+) dB", out)
+    return float(m.group(1)) if m else -200.0
+
+
+def last_audio_payload(ctx):
+    done = [b for b in ctx.sniff.of(USER, "OGGv", 0) if b["guid"] in ctx.sniff.ended]
+    return guided(ctx.sniff)[done[-1]["guid"]]
+
+
+def s_vst_plugin(ctx):
+    plugin = os.path.join(PEERS, "TestVst.vst")
+    vlog = os.path.join(ctx.dir, "vst.log")
+    ctx.server = Server(ctx.dir)
+    ctx.sniff = Sniffer(ctx.server.port)
+    ctx.jt = Jamtaba(ctx.dir, marks=False, extra_env={"JT_TEST_VST_LOG": vlog, "JT_TEST_VST_NOTES": "1"})
+    ctx.jt.connect(ctx.server.port)
+    check(ctx.sniff.wait_intervals(USER, "OGGv", 2), "audio running")
+    time.sleep(1)
+    before = peak_db(ctx, last_audio_payload(ctx), "before.ogg")
+    ctx.jt.cmd(f"plugin {plugin}")
+    time.sleep(2 * INTERVAL + 3)
+    check('JT_TEST plugin loaded "TestVst"' in ctx.jt.log(), "the plugin loads, and its name is read")
+    after = peak_db(ctx, last_audio_payload(ctx), "after.ogg")
+    print(f"    sent audio: {before:.1f} dB before the plugin, {after:.1f} dB with it")
+    ctx.metrics.update(before_db=before, after_db=after)
+    check(before < -40, f"silence before it ({before:.1f} dB)")
+    check(after > -12, f"its sound reaches the room ({after:.1f} dB)")
+    ctx.jt.cmd("pluginstate")
+    time.sleep(1)
+    check(re.search(r"JT_TEST plugin state bytes [1-9]", ctx.jt.log()), "its state can be saved")
+    ctx.jt.cmd("pluginremove")
+    time.sleep(1)
+    with open(vlog) as f:
+        v = f.read()
+    print("    " + " | ".join(sorted(set(re.sub(r"ppq 1 [\d.]+", "ppq 1", l) for l in v.splitlines())))[:600])
+    check("hostversion 2400" in v or re.search(r"hostversion [1-9]", v), "it can ask for the host's version")
+    check("vendor canary ok" in v and "vendor www.jamtaba.com" in v, "the host's name arrives, within its buffer")
+    rate = re.search(r"^samplerate (\d+)", v, re.M)
+    check(rate and int(rate.group(1)) in (44100, 48000), f"it gets the sample rate ({rate and rate.group(1)})")
+    check(re.search(r"^blocksize [1-9]", v, re.M), "and the block size")
+    check("mains 1" in v and "startprocess" in v, "it's started")
+    check("time tempo 1 120" in v, "it reads the room's tempo")
+    check("time signature 4 4" in v, "and the time signature")
+    check(re.search(r"time ppq 1 [1-9]", v), "and the position in the beat")
+    check("time playing 1" in v, "and that it's playing")
+    check("midi 144 60" in v, "MIDI notes reach it")
+    check("getchunk" in v and "setchunk same" in v, "its state comes back intact")
+    check("stopprocess" in v and "close" in v, "it's closed when removed")
+    check(ctx.jt.proc.poll() is None, "still running")
+
+
+def front_app():
+    out = subprocess.run(["lsappinfo", "info", "-only", "name", subprocess.run(["lsappinfo", "front"], capture_output=True, text=True).stdout.strip()], capture_output=True, text=True).stdout
+    return out.strip()
+
+
+def s_automation_stays_out_of_the_way(ctx):
+    before = front_app()
+    ctx.server = Server(ctx.dir)
+    ctx.sniff = Sniffer(ctx.server.port)
+    ctx.jt = Jamtaba(ctx.dir, marks=False)
+    ctx.jt.connect(ctx.server.port)
+    check(ctx.sniff.wait_intervals(USER, "OGGv", 1), "automation still drives it")
+    print(f"    front app: {before} -> {front_app()}")
+    check("JamtabaZap" not in front_app(), "it doesn't take the front of the screen")
+    log = ctx.jt.log()
+    check("Settings addVstPlugin" not in log, "it doesn't scan this computer's plugins")
+    hosts = set(re.findall(r'socket connected on\s+"([^"]+)"', log))
+    check(hosts == {"localhost"}, f"it only connects to the local server ({hosts})")
+
+
+def s_vst_scanner(ctx):
+    scanner = os.path.join(os.path.dirname(APP), "VstScanner")
+    check(os.path.exists(scanner), "the scanner is next to the app")
+    env = dict(os.environ, HOME=ctx.dir, JT_TEST_VST_LOG=os.path.join(ctx.dir, "vst.log"))
+    out = subprocess.run([scanner, PEERS, ""], capture_output=True, text=True, timeout=60, env=env).stdout
+    print("    " + " | ".join(l for l in out.splitlines() if l.startswith("JT-"))[:400])
+    check("JT-Scanner-Finished" in out, "it finishes")
+    check(re.search(r"JT-Scanner-Scan-Finished: .*TestVst", out), "and finds the plugin")
+
+
+def s_vst_real_plugin(ctx):
+    # Someone's own plugin, with its window on their screen: only when asked for, by path.
+    plugin = os.environ.get("JT_TEST_REAL_VST")
+    if not plugin:
+        raise KnownGap("set JT_TEST_REAL_VST to the path of a VST2 plugin to run this")
+    ctx.server = Server(ctx.dir)
+    ctx.sniff = Sniffer(ctx.server.port)
+    ctx.jt = Jamtaba(ctx.dir, marks=False)
+    ctx.jt.connect(ctx.server.port)
+    check(ctx.sniff.wait_intervals(USER, "OGGv", 1), "audio running")
+    ctx.jt.cmd(f"plugin {plugin}")
+    time.sleep(5)
+    check("JT_TEST plugin loaded" in ctx.jt.log() and 'loaded "none"' not in ctx.jt.log(), "a real VST2 plugin loads")
+    ctx.jt.cmd("plugineditor")
+    time.sleep(3)
+    check("JT_TEST plugin editor opened" in ctx.jt.log(), "and its editor opens")
+    ctx.jt.cmd("pluginstate")
+    time.sleep(2)
+    m = re.search(r"JT_TEST plugin state bytes (\d+)", ctx.jt.log())
+    print(f"    state: {m and m.group(1)} bytes")
+    check(m and int(m.group(1)) > 0, "its state can be saved and restored")
+    count = len(ctx.sniff.of(USER, "OGGv", 0))
+    time.sleep(2 * INTERVAL)
+    check(len(ctx.sniff.of(USER, "OGGv", 0)) > count, "audio keeps going with it")
+    ctx.jt.cmd("pluginremove")
+    time.sleep(2)
+    check("JT_TEST plugin removed" in ctx.jt.log(), "it can be removed")
+    check(ctx.jt.proc.poll() is None, "still running")
 
 
 def s_receives_ninjamzap_video(ctx):
@@ -1004,6 +1121,10 @@ SCENARIOS = [
     ("video preset change", s_video_preset_change),
     ("legacy server stays sd", s_legacy_server_stays_sd),
     ("audio presets", s_audio_presets),
+    ("automation stays out of the way", s_automation_stays_out_of_the_way),
+    ("vst plugin", s_vst_plugin),
+    ("vst scanner", s_vst_scanner),
+    ("vst real plugin", s_vst_real_plugin),
     ("encoder keeps up hd", s_encoder_keeps_up_hd),
     ("slow encoder drops frames", s_slow_encoder_drops_frames),
     ("hd jamtaba to jamtaba", s_hd_jamtaba_to_jamtaba),

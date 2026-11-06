@@ -140,6 +140,9 @@ public slots:
     void addPrivateChat(const QString &remoteUserName, const QString &userIP);
 
 protected:
+    // Commands only this kind of window understands. Returns if it took the command.
+    virtual bool runPlatformTestCommand(const QStringList &) { return false; }
+
     controller::MainController *mainController;
     Ui::MainFrameClass ui;
     QList<LocalTrackGroupView *> localGroupChannels;

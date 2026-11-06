@@ -299,6 +299,15 @@ void MainWindow::initializeTestControl()
     if (path.isEmpty())
         return;
 
+    // Automation runs on someone's screen: a stray click or key here could leave the room, open a
+    // dialog or join a public one in the middle of a test.
+    setWindowFlag(Qt::WindowTransparentForInput);
+    setWindowFlag(Qt::WindowDoesNotAcceptFocus);
+    setAttribute(Qt::WA_ShowWithoutActivating);
+    setEnabled(false);
+    if (isVisible())
+        show();
+
     // Automation (tests/ninjamzap): one command per line, appended to a file.
     auto timer = new QTimer(this);
     auto linesDone = new int(0);
@@ -316,6 +325,9 @@ void MainWindow::initializeTestControl()
 void MainWindow::runTestCommand(const QStringList &args)
 {
     qInfo() << "JT_TEST command" << args;
+    if (runPlatformTestCommand(args))
+        return;
+
     const QString cmd = args.value(0);
     const bool on = args.value(1) == QStringLiteral("on");
     if (cmd == QStringLiteral("connect")) {

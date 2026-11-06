@@ -71,6 +71,31 @@ void MainWindowStandalone::setupShortcuts()
     new QShortcut(QKeySequence(Qt::Key_Escape), this, SLOT(tryClose()));
 }
 
+bool MainWindowStandalone::runPlatformTestCommand(const QStringList &args)
+{
+    const auto cmd = args.value(0);
+    if (cmd == QStringLiteral("plugin")) {
+        const audio::PluginDescriptor descriptor(QFileInfo(args.value(1)).baseName(), audio::PluginDescriptor::VST_Plugin, QStringLiteral("test"), args.value(1));
+        testPlugin = controller->addPlugin(0, 0, descriptor);
+        qInfo() << "JT_TEST plugin loaded" << (testPlugin ? testPlugin->getName() : QStringLiteral("none"));
+    } else if (cmd == QStringLiteral("pluginstate") && testPlugin) {
+        const auto state = testPlugin->getSerializedData();
+        qInfo() << "JT_TEST plugin state bytes" << state.size();
+        testPlugin->restoreFromSerializedData(state);
+    } else if (cmd == QStringLiteral("plugineditor") && testPlugin) {
+        testPlugin->openEditor(geometry().center());
+        qInfo() << "JT_TEST plugin editor opened";
+    } else if (cmd == QStringLiteral("pluginremove") && testPlugin) {
+        testPlugin->closeEditor();
+        controller->removePlugin(0, testPlugin);
+        testPlugin.clear();
+        qInfo() << "JT_TEST plugin removed";
+    } else {
+        return false;
+    }
+    return true;
+}
+
 void MainWindowStandalone::tryClose() // this function is called when ESC is pressed
 {
     if (!mainController)

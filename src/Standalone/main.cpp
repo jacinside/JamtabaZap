@@ -1,3 +1,8 @@
+#include <QtGlobal>
+#ifdef Q_OS_MAC
+#include <objc/message.h>
+#include <objc/runtime.h>
+#endif
 #include <QApplication>
 #include <QMainWindow>
 #include <QDir>
@@ -11,6 +16,14 @@
 
 int main(int argc, char *args[])
 {
+#ifdef Q_OS_MAC
+    // Automation runs on someone's screen, and shouldn't come to the front or take their keyboard.
+    if (qEnvironmentVariableIsSet("JT_TEST_CONTROL")) {
+        const auto app = reinterpret_cast<id (*)(id, SEL)>(objc_msgSend)(reinterpret_cast<id>(objc_getClass("NSApplication")), sel_registerName("sharedApplication"));
+        reinterpret_cast<void (*)(id, SEL, long)>(objc_msgSend)(app, sel_registerName("setActivationPolicy:"), 1); // accessory
+    }
+#endif
+
     QApplication::setApplicationName("JamTaba 2");
     QApplication::setApplicationVersion(APP_VERSION);
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling); // fixing issue https://github.com/elieserdejesus/JamTaba/issues/1216

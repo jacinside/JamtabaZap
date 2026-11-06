@@ -721,6 +721,10 @@ void MainControllerStandalone::scanOnlyNewVstPlugins()
 
 void MainControllerStandalone::scanVstPlugins(bool scanOnlyNewPlugins)
 {
+    // Automation only loads the plugins it's told to, not whatever this computer has installed.
+    if (qEnvironmentVariableIsSet("JT_TEST_CONTROL"))
+        return;
+
 #ifdef JT_NO_VST2
     Q_UNUSED(scanOnlyNewPlugins)
     return;
