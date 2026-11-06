@@ -767,6 +767,19 @@ void NinjamRoomWindow::setupSignals(controller::NinjamController* ninjamControll
 
     connect(mainController->getNinjamService(), &ninjam::client::Service::videoIntervalCompleted, this, &NinjamRoomWindow::setVideoInterval);
 
+    connect(mainController->getNinjamService(), &ninjam::client::Service::syncedVideoIntervalBegin, this,
+            [this](const QString &user, const ninjam::MessageGuid &GUID) {
+        auto group = trackGroups.value(user);
+        if (group)
+            group->beginSyncedVideoInterval(GUID);
+    });
+    connect(mainController->getNinjamService(), &ninjam::client::Service::syncedVideoIntervalData, this,
+            [this](const QString &user, const ninjam::MessageGuid &GUID, const QByteArray &data, bool isLastPart) {
+        auto group = trackGroups.value(user);
+        if (group)
+            group->addSyncedVideoData(GUID, data, isLastPart);
+    });
+
     connect(ui->chordsButton, &QPushButton::clicked, [=](){
 
         auto chordsPanel = mainWindow->getChordsPanel();

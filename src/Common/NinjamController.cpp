@@ -351,6 +351,9 @@ void NinjamController::process(const audio::SamplesBuffer &in, audio::SamplesBuf
         //    track->setProcessingLastPartOfInterval(isLastPart); // TODO resampler still need a flag indicating the last part?
         mainController->doAudioProcess(tempInBuffer, tempOutBuffer, sampleRate);
         out.add(tempOutBuffer, offset); // generate audio output
+
+        if (qEnvironmentVariableIsSet("JT_TEST_CONTROL"))
+            TestAvMarks::noteOutput(tempOutBuffer.computePeak().getMaxPeak());
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         if (preparedForTransmit)
@@ -894,7 +897,7 @@ void NinjamController::scheduleBpmChangeEvent(quint16 newBpm)
 }
 
 void NinjamController::handleIntervalCompleted(const User &user, quint8 channelIndex,
-                                               const QByteArray &encodedData)
+                                               const QByteArray &encodedData, const ninjam::MessageGuid &GUID)
 {
     if (mainController->isMultiTrackRecordingActivated())
     {
@@ -914,7 +917,7 @@ void NinjamController::handleIntervalCompleted(const User &user, quint8 channelI
             }
         }
         if (trackNode) {
-            trackNode->addVorbisEncodedInterval(encodedData);
+            trackNode->addVorbisEncodedInterval(encodedData, GUID);
             emit channelAudioFullyDownloaded(trackNode->getID());
         } else {
             qWarning() << "The channel " << channelIndex << " of user " << user.getName()
@@ -1008,7 +1011,7 @@ void NinjamController::setSampleRate(int newSampleRate)
     recreateEncoders();
 }
 
-void NinjamController::handleIntervalDownloading(const User &user, quint8 channelIndex, const QByteArray &encodedAudio, bool isFirstPart, bool isLastPart)
+void NinjamController::handleIntervalDownloading(const User &user, quint8 channelIndex, const QByteArray &encodedAudio, bool isFirstPart, bool isLastPart, const ninjam::MessageGuid &)
 {
     bool visited = user.visitChannel(channelIndex, [&](const UserChannel& channel) {
         QString channelKey = getUniqueKeyForChannel(channel, user.getFullName());

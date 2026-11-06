@@ -2,6 +2,8 @@
 #include "MainController.h"
 #include "NinjamController.h"
 #include "video/FFMpegDemuxer.h"
+#include "video/TestAvMarks.h"
+#include "audio/NinjamTrackNode.h"
 #include "IconFactory.h"
 #include "ninjam/client/Service.h"
 #include "MainWindow.h"
@@ -81,6 +83,9 @@ NinjamTrackGroupView::NinjamTrackGroupView(MainController *mainController, long 
     userNameLabel->setStyleSheet(styleSheet);
 
     QIcon webcamIcon = IconFactory::createWebcamIcon(getTintColor());
+    syncedVideo = new SyncedVideoStream(this);
+    connect(syncedVideo, &SyncedVideoStream::frameDecoded, this, &NinjamTrackGroupView::updateVideoFrame);
+
     videoWidget = new VideoWidget(this, webcamIcon);
     videoWidget->setVisible(false); // video preview will be visible when the first received frame is decoded
 
@@ -152,9 +157,25 @@ void NinjamTrackGroupView::addVideoInterval(const QByteArray &encodedVideoData)
     QtConcurrent::run(videoDecoder, &FFMpegDemuxer::decode);
 }
 
+void NinjamTrackGroupView::beginSyncedVideoInterval(const ninjam::MessageGuid &GUID)
+{
+    syncedVideo->beginInterval(GUID);
+}
+
+void NinjamTrackGroupView::addSyncedVideoData(const ninjam::MessageGuid &GUID, const QByteArray &data, bool isLastPart)
+{
+    syncedVideo->addData(GUID, data, isLastPart);
+}
+
 void NinjamTrackGroupView::startVideoStream()
 {
     lastVideoRender = 0;
+
+    QList<AudioIntervalState> audio;
+    visitTracks<NinjamTrackView>([&audio](NinjamTrackView *track) {
+        audio.append(track->getAudioIntervalState());
+    });
+    syncedVideo->swap(audio);
 
     if (!decodedImages.isEmpty()) {
         while (decodedImages.size() > 1)
@@ -172,6 +193,9 @@ void NinjamTrackGroupView::startVideoStream()
 
 void NinjamTrackGroupView::updateVideoFrame(const QImage &frame)
 {
+    if (qEnvironmentVariableIsSet("JT_TEST_CONTROL"))
+        TestAvMarks::noteFrame(frame);
+
     videoWidget->setCurrentFrame(frame);
 
     videoWidget->setVisible(true);
@@ -470,6 +494,10 @@ void NinjamTrackGroupView::updateGuiElements()
     userNameLabel->updateMarquee();
 
     // video
+    auto ninjamController = mainController->getNinjamController();
+    if (ninjamController)
+        syncedVideo->tick(ninjamController->getIntervalProgress());
+
     if (!decodedImages.isEmpty()) {
         quint64 now = QDateTime::currentMSecsSinceEpoch();
 

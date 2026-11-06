@@ -209,8 +209,8 @@ class Sniffer(threading.Thread):
 
 
 class Jamtaba:
-    def __init__(self, workdir, name=USER):
-        self.dir = os.path.join(workdir, "jamtaba")
+    def __init__(self, workdir, name=USER, marks=True):
+        self.dir = os.path.join(workdir, name)
         data = os.path.join(self.dir, "home/Library/Application Support/JamTaba 2")
         os.makedirs(data)
         cfg = dict(masterGain=1, userName=name, translation="en", theme="Navy_nm",
@@ -221,9 +221,11 @@ class Jamtaba:
                 json.dump(cfg, out)
         self.control = os.path.join(self.dir, "control.txt")
         open(self.control, "w").close()
-        self.log_path = os.path.join(workdir, "jamtaba.log")
+        self.log_path = os.path.join(workdir, f"{name}.log")
         env = dict(os.environ, HOME=os.path.join(self.dir, "home"), CFFIXED_USER_HOME=os.path.join(self.dir, "home"),
-                   JT_TEST_CONTROL=self.control, JT_TEST_AVMARKS="1")
+                   JT_TEST_CONTROL=self.control)
+        if marks:
+            env["JT_TEST_AVMARKS"] = "1"
         self.proc = subprocess.Popen([APP], cwd=self.dir, env=env, stdout=open(self.log_path, "w"), stderr=subprocess.STDOUT)
         self.name = name
         time.sleep(6)
@@ -481,19 +483,65 @@ def s_legacy_server(ctx):
     check(not ctx.jt.errors(), "no encoder errors in Jamtaba's log")
 
 
-def s_ignores_ninjamzap_video(ctx):
+def s_receives_ninjamzap_video(ctx):
     join(ctx, camera=False)
     peer = subprocess.Popen([os.path.join(PEERS, "nzpeer"), "127.0.0.1", str(ctx.server.port), "nzvideo", ctx.frames, ctx.sps,
-                             "15", "1", "60"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+                             "15", "1", "70"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     ctx.cleanup.append(peer.terminate)
-    check(ctx.sniff.wait_intervals("nzvideo", "H264", 2), "a NinjamZap peer sends video")
-    start = ctx.jt.bytes_in()
-    time.sleep(INTERVAL * 3)
-    received = ctx.jt.bytes_in() - start
-    video = 100 * 1024 * 3 * 8 / 8 * 0.8  # ~800 kbps for 3 intervals would be > 1.9 MB
-    check(received < video, f"Jamtaba doesn't download it ({received / 1024:.0f} KB in 3 intervals)")
+    check(ctx.sniff.wait_intervals("nzvideo", "H264", 7), "a NinjamZap peer sends video")
+    time.sleep(1)
+    log = ctx.jt.log()
+    plays = re.findall(r"JT_TEST video play match (\S+) frames (\d+)", log.replace('"', ""))
+    print(f"    plays: {plays}")
+    check(len(plays) >= 3, f"Jamtaba plays the video matched by GUID ({len(plays)})")
+    check({m for m, _ in plays} <= {"PREV", "DS"}, "through the audio's GUID")
+    check("JT_TEST video drop" not in log, "without drops")
     check(not ctx.jt.errors(), f"no decoder errors ({ctx.jt.errors()[:1]})")
+    check("Error decoding video" not in log and "Could not open the H.264" not in log, "H.264 decodes")
     check(ctx.jt.alive(), "still running")
+    time.sleep(INTERVAL)
+    check(("nzvideo", 1) in ctx.sniff.channels and ctx.jt.alive(), "and keeps going")
+
+
+def jamtaba_to_jamtaba(ctx, seconds):
+    ctx.server = Server(ctx.dir)
+    ctx.sniff = Sniffer(ctx.server.port)
+    ctx.jt = Jamtaba(ctx.dir, name="receiver", marks=False)
+    sender = Jamtaba(ctx.dir, name=USER)
+    ctx.cleanup.append(sender.stop)
+    ctx.jt.connect(ctx.server.port)
+    sender.connect(ctx.server.port)
+    sender.cmd("camera on")
+    check(ctx.sniff.wait_intervals(USER, "H264", 2), "the sender transmits video")
+    time.sleep(seconds)
+    return sender
+
+
+def s_jamtaba_to_jamtaba_sync(ctx):
+    sender = jamtaba_to_jamtaba(ctx, 60)
+    log = ctx.jt.log()
+    plays = re.findall(r"JT_TEST video play match (\S+)", log.replace('"', ""))
+    check(len(plays) >= 4, f"the receiver plays the video ({len(plays)}: {set(plays)})")
+    check(not ctx.jt.errors() and not sender.errors(), "no errors on either side")
+    events = [(m.group(1), int(m.group(2))) for m in re.finditer(r"JT_TEST (tone|toneoff|flash) (\d+)", log)]
+    tones, start = [], None
+    for kind, t in events:
+        if kind == "tone":
+            start = t
+        elif kind == "toneoff" and start is not None:
+            if 100 <= t - start <= 400:  # metronome clicks are much shorter
+                tones.append(start)
+            start = None
+    flashes = [t for kind, t in events if kind == "flash"]
+    check(len(tones) >= 10 and len(flashes) >= 10, f"marks: {len(flashes)} flashes, {len(tones)} tones")
+    diffs = [f - min(tones, key=lambda x: abs(x - f)) for f in flashes][2:]
+    diffs = [d for d in diffs if abs(d) < 1000]
+    med, sd = statistics.median(diffs), statistics.pstdev(diffs)
+    print(f"    offsets ms: {diffs}")
+    print(f"    median {med:.0f} ms, spread {sd:.0f} ms, min {min(diffs)}, max {max(diffs)}")
+    ctx.metrics["median_ms"], ctx.metrics["spread_ms"] = round(med), round(sd)
+    check(abs(med) <= ctx.sync_limit_ms, f"the receiver shows video within {ctx.sync_limit_ms} ms of the audio")
+    check(sd <= 250, "stable over the session")
 
 
 def s_legacy_jtbv_receive(ctx):
@@ -627,7 +675,8 @@ SCENARIOS = [
     ("receiver core", s_receiver_core),
     ("av sync", s_av_sync),
     ("legacy server", s_legacy_server),
-    ("ignores ninjamzap video", s_ignores_ninjamzap_video),
+    ("receives ninjamzap video", s_receives_ninjamzap_video),
+    ("jamtaba to jamtaba sync", s_jamtaba_to_jamtaba_sync),
     ("legacy jtbv receive", s_legacy_jtbv_receive),
     ("camera toggle", s_camera_toggle),
     ("bpm change", s_bpm_change),

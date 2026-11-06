@@ -285,6 +285,8 @@ public:
 
     bool isVideo() const;
 
+    inline bool isSyncedVideo() const { return fourCC == MessageFourCC{{'H', '2', '6', '4'}}; }
+
     inline bool shouldBeStopped() const
     {
         return GUID.at(0) == '0' && GUID.at(GUID.size()-1) == '0';

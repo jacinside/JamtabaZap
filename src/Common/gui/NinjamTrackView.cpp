@@ -256,6 +256,12 @@ void NinjamTrackView::setChannelMode(NinjamTrackNode::ChannelMode mode)
     }
 }
 
+AudioIntervalState NinjamTrackView::getAudioIntervalState() const
+{
+    auto node = getTrackNode();
+    return node ? node->getAudioIntervalState() : AudioIntervalState();
+}
+
 bool NinjamTrackView::isVideoChannel() const
 {
     return instrumentsButton->getSelectedIcon() == static_cast<int>(InstrumentIndex::Video);

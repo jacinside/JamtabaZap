@@ -274,8 +274,15 @@ bool NinjamTrackNode::startNewInterval()
     consumePendingEvents(true);
     if (mode == Intervalic) {
         std::shared_ptr<IntervalDecoder> decoder; //discard the previous interval decoder
+        if (playingGuid)
+            previousGuid = currentGuid;
+        playingGuid = false;
         if (!decoders.isEmpty()) {
             decoder = decoders.takeFirst(); //using the next buffered decoder (next interval)
+            if (!queuedGuids.isEmpty()) {
+                currentGuid = queuedGuids.takeFirst();
+                playingGuid = true;
+            }
         }
         std::atomic_store(&currentDecoder, decoder);
     }
@@ -315,7 +322,18 @@ void NinjamTrackNode::addVorbisEncodedChunk(const QByteArray &chunkBytes, bool i
 }
 
  // this function is used only for Intervalic mode. The parameter is a full Ogg Vorbis Interval data
-void NinjamTrackNode::addVorbisEncodedInterval(const QByteArray &fullIntervalBytes)
+AudioIntervalState NinjamTrackNode::getAudioIntervalState()
+{
+    QMutexLocker locker(&decodersMutex);
+    AudioIntervalState state;
+    state.playing = playingGuid;
+    state.current = currentGuid;
+    state.previous = previousGuid;
+    state.queued = queuedGuids;
+    return state;
+}
+
+void NinjamTrackNode::addVorbisEncodedInterval(const QByteArray &fullIntervalBytes, const ninjam::MessageGuid &GUID)
 {
     //qDebug() << "Full Interval received " << fullIntervalBytes.left(4);
 
@@ -327,6 +345,7 @@ void NinjamTrackNode::addVorbisEncodedInterval(const QByteArray &fullIntervalByt
     {
         QMutexLocker locker(&decodersMutex);
         decoders.append(decoder);
+        queuedGuids.append(GUID);
     }
 
     //decoding the first samples in a separated thread to avoid slow down the audio thread in interval start (first beat)
@@ -442,6 +461,8 @@ bool NinjamTrackNode::isPlayingLocked() {
 
 void NinjamTrackNode::discardDownloadedIntervalsLocked() {
     decoders.clear();
+    queuedGuids.clear();
+    playingGuid = false;
     std::atomic_store(&currentDecoder, {});
     //qDebug() << "intervals discarded";
 }

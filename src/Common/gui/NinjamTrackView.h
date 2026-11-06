@@ -1,6 +1,7 @@
 #ifndef NINJAMTRACKVIEW_H
 #define NINJAMTRACKVIEW_H
 
+#include "video/SyncedVideoStream.h"
 #include "TrackGroupView.h"
 #include "BaseTrackView.h"
 #include "widgets/IntervalChunksDisplay.h"
@@ -44,6 +45,8 @@ public:
     void setTintColor(const QColor &color) override;
 
     bool isVideoChannel() const;
+
+    AudioIntervalState getAudioIntervalState() const;
 
     static void setNetworkUsageUpdatePeriod(quint32 periodInMilliseconds);
 

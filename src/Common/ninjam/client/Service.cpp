@@ -302,17 +302,29 @@ void Service::process(const UserInfoChangeNotifyMessage &msg)
     for (auto iterator = msg.getUsers().keyBegin();
          iterator != msg.getUsers().keyEnd(); ++iterator) {
         const auto& userFullName = *iterator;
-        // Video-only channels (flag 0x10) can't be shown here: not subscribing saves their download.
+        // Video-only channels (flag 0x10) aren't audio tracks. One camera per user for now.
         QList<UserChannel> channels;
+        bool videoChanged = false;
         for (const UserChannel &channel : msg.getUsers().values(userFullName)) {
-            if (!(static_cast<quint8>(channel.getFlags()) & 0x10))
+            if (static_cast<quint8>(channel.getFlags()) & 0x10) {
+                if (channel.isActive() && !videoChannels.contains(userFullName)) {
+                    videoChannels.insert(userFullName, channel.getIndex());
+                    videoChanged = true;
+                } else if (!channel.isActive() && videoChannels.value(userFullName, 255) == channel.getIndex()) {
+                    videoChannels.remove(userFullName);
+                    videoChanged = true;
+                }
+            } else {
                 channels.append(channel);
+            }
         }
         handleUserChannels(userFullName, channels);
         // enable receive for all user channels
         for (const UserChannel &channel : channels) {
             setChannelReceiveStatus(userFullName, channel.getIndex(), true);
         }
+        if (videoChanged)
+            sendUserMask(userFullName);
     }
 }
 
@@ -321,19 +333,33 @@ void Service::setChannelReceiveStatus(const QString &userFullName, quint8 channe
     if (currentServer->containsUser(userFullName)) {
         currentServer->updateUserChannelReceiveStatus(userFullName, channelIndex, receiveChannel);
 
-        User user = currentServer->getUser(userFullName);
-        quint32 channelsMask = 0;
-        for (const UserChannel &channel : qAsConst(user.getChannels())) {
-            if (channel.isActive() || (channel.getIndex() == channelIndex && receiveChannel))
-                channelsMask |= 1 << channel.getIndex();
-        }
-        sendMessageToServer(ClientSetUserMask(userFullName, channelsMask));
+        sendUserMask(userFullName, receiveChannel ? 1u << channelIndex : 0u);
     }
+}
+
+void Service::sendUserMask(const QString &userFullName, quint32 extraChannels)
+{
+    if (!currentServer->containsUser(userFullName))
+        return;
+
+    User user = currentServer->getUser(userFullName);
+    quint32 channelsMask = extraChannels;
+    for (const UserChannel &channel : qAsConst(user.getChannels())) {
+        if (channel.isActive())
+            channelsMask |= 1u << channel.getIndex();
+    }
+    if (videoChannels.contains(userFullName))
+        channelsMask |= 1u << videoChannels.value(userFullName);
+    sendMessageToServer(ClientSetUserMask(userFullName, channelsMask));
 }
 
 void Service::process(const DownloadIntervalBegin &msg)
 {
-    if (!msg.shouldBeStopped() && (msg.isAudio() || msg.isVideo())) {
+    if (!msg.shouldBeStopped() && msg.isSyncedVideo()) {
+        syncedVideoDownloads.insert(msg.getGUID(), msg.getUserName());
+        emit syncedVideoIntervalBegin(msg.getUserName(), msg.getGUID());
+    }
+    else if (!msg.shouldBeStopped() && (msg.isAudio() || msg.isVideo())) {
         quint8 channelIndex = msg.getChannelIndex();
         QString userFullName = msg.getUserName();
         const MessageGuid& GUID = msg.getGUID();
@@ -343,6 +369,14 @@ void Service::process(const DownloadIntervalBegin &msg)
 
 void Service::process(const DownloadIntervalWrite &msg)
 {
+    auto syncedVideo = syncedVideoDownloads.find(msg.getGUID());
+    if (syncedVideo != syncedVideoDownloads.end()) {
+        emit syncedVideoIntervalData(syncedVideo.value(), msg.getGUID(), msg.getEncodedData(), msg.downloadIsComplete());
+        if (msg.downloadIsComplete())
+            syncedVideoDownloads.erase(syncedVideo);
+        return;
+    }
+
     if (downloads.contains(msg.getGUID())) {
         Download &download = downloads[msg.getGUID()];
 
@@ -360,11 +394,11 @@ void Service::process(const DownloadIntervalWrite &msg)
             user.visitChannel(download.getChannelIndex(), [&](const UserChannel& channel) {
                 if (channel.isActive()) {
                     if (msg.downloadIsComplete()) {
-                        emit audioIntervalDownloading(user, download.getChannelIndex(), msg.getEncodedData(), isFirstPart, true); // the last chunk
-                        emit audioIntervalCompleted(user, download.getChannelIndex(), download.getEncodedData()); // full interval
+                        emit audioIntervalDownloading(user, download.getChannelIndex(), msg.getEncodedData(), isFirstPart, true, msg.getGUID()); // the last chunk
+                        emit audioIntervalCompleted(user, download.getChannelIndex(), download.getEncodedData(), msg.getGUID()); // full interval
                         downloads.remove(msg.getGUID());
                     } else {
-                        emit audioIntervalDownloading(user, download.getChannelIndex(), msg.getEncodedData(), isFirstPart, false);
+                        emit audioIntervalDownloading(user, download.getChannelIndex(), msg.getEncodedData(), isFirstPart, false, msg.getGUID());
                     }
                 }
             });

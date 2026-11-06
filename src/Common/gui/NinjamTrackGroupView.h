@@ -5,6 +5,7 @@
 #include "NinjamTrackView.h"
 #include "widgets/MarqueeLabel.h"
 #include "video/VideoWidget.h"
+#include "video/SyncedVideoStream.h"
 
 #include <QLabel>
 #include <QBoxLayout>
@@ -48,6 +49,9 @@ public:
 
     void addVideoInterval(const QByteArray &encodedVideoData);
 
+    void beginSyncedVideoInterval(const ninjam::MessageGuid &GUID);
+    void addSyncedVideoData(const ninjam::MessageGuid &GUID, const QByteArray &data, bool isLastPart);
+
     QColor getTintColor() const;
 
     static const uint MAX_WIDTH_IN_GRID_LAYOUT;
@@ -74,6 +78,7 @@ private:
     TracksLayout tracksLayoutEnum;
 
     VideoWidget *videoWidget;
+    SyncedVideoStream *syncedVideo;
     QByteArray encodedVideoData;
     quint64 lastVideoRender;
     QList<QList<QImage>> decodedImages;

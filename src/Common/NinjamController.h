@@ -1,6 +1,7 @@
 #ifndef NINJAMJAMROOMCONTROLLER_H
 #define NINJAMJAMROOMCONTROLLER_H
 
+#include "ninjam/Ninjam.h"
 #include <QObject>
 #include <QMutex>
 #include <QThread>
@@ -88,6 +89,9 @@ public:
     User getUserByName(const QString &userName) const;
 
     uint getSamplesPerInterval() const;
+
+    // Position in the current interval, 0..1
+    inline double getIntervalProgress() const { return samplesInInterval > 0 ? static_cast<double>(intervalPosition) / samplesInInterval : 0.0; }
 
     QList<QSharedPointer<NinjamTrackNode>> getTrackNodes() const;
 
@@ -189,8 +193,8 @@ private slots:
     void scheduleBpmChangeEvent(quint16 newBpm);
     void scheduleBpiChangeEvent(quint16 newBpi, quint16 oldBpi);
     void handleIntervalCompleted(const ninjam::client::User &user, quint8 channelIndex,
-                                 const QByteArray &encodedAudioData);
-    void handleIntervalDownloading(const ninjam::client::User &user, quint8 channelIndex, const QByteArray &encodedAudio, bool isFirstPart, bool isLastPart);
+                                 const QByteArray &encodedAudioData, const ninjam::MessageGuid &GUID);
+    void handleIntervalDownloading(const ninjam::client::User &user, quint8 channelIndex, const QByteArray &encodedAudio, bool isFirstPart, bool isLastPart, const ninjam::MessageGuid &GUID);
     void addNinjamRemoteChannel(const ninjam::client::User &user, const ninjam::client::UserChannel &channel);
     void removeNinjamRemoteChannel(const ninjam::client::User &user, const ninjam::client::UserChannel &channel);
     void updateNinjamRemoteChannel(const ninjam::client::User &user, const ninjam::client::UserChannel &channel);

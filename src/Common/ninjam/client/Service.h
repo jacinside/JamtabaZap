@@ -90,9 +90,11 @@ namespace client
         void serverBpiChanged(quint16 currentBpi, quint16 lastBpi);
         void serverBpmChanged(quint16 currentBpm);
         void serverInitialBpmBpiAvailable(quint16 bpm, quint16 bpi);
-        void audioIntervalCompleted(const ninjam::client::User &user, quint8 channelIndex, const QByteArray &encodedAudioData);
+        void audioIntervalCompleted(const ninjam::client::User &user, quint8 channelIndex, const QByteArray &encodedAudioData, const ninjam::MessageGuid &GUID);
         void videoIntervalCompleted(const ninjam::client::User &user, const QByteArray &encodedVideoData);
-        void audioIntervalDownloading(const ninjam::client::User &user, quint8 channelIndex, const QByteArray &encodedAudioData, bool isFirstPart, bool isLastPart);
+        void syncedVideoIntervalBegin(const QString &userFullName, const ninjam::MessageGuid &GUID);
+        void syncedVideoIntervalData(const QString &userFullName, const ninjam::MessageGuid &GUID, const QByteArray &data, bool isLastPart);
+        void audioIntervalDownloading(const ninjam::client::User &user, quint8 channelIndex, const QByteArray &encodedAudioData, bool isFirstPart, bool isLastPart, const ninjam::MessageGuid &GUID);
         void disconnectedFromServer(const ninjam::client::ServerInfo &server);
         void connectedInServer(const ninjam::client::ServerInfo &server);
         void publicChatMessageReceived(const ninjam::client::User &sender, const QString &message);
@@ -135,6 +137,9 @@ namespace client
         long serverKeepAlivePeriod;
         QString serverLicence;
         quint32 serverCapabilities = 0;
+        QMap<QString, quint8> videoChannels; // per user, the video-only channel subscribed to
+        QMap<MessageGuid, QString> syncedVideoDownloads;
+        void sendUserMask(const QString &userFullName, quint32 extraChannels = 0);
 
         QScopedPointer<ServerInfo> currentServer;
 

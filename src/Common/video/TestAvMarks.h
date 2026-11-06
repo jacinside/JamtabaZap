@@ -2,6 +2,8 @@
 #define TEST_AV_MARKS_H
 
 #include <cmath>
+#include <QDateTime>
+#include <QDebug>
 #include <QImage>
 #include <QtGlobal>
 
@@ -27,6 +29,25 @@ inline QImage frame(const QSize &size, qint64 intervalPosition, int sampleRate)
     QImage image(size, QImage::Format_RGB32);
     image.fill(isMarked(intervalPosition, sampleRate) ? Qt::white : Qt::black);
     return image;
+}
+
+// Automation: when a tone starts in the output, in the same clock as the frames shown.
+inline void noteOutput(float peak)
+{
+    static bool sounding = false;
+    const bool now = peak > 0.05f;
+    if (now != sounding)
+        qInfo().noquote() << (now ? "JT_TEST tone" : "JT_TEST toneoff") << QDateTime::currentMSecsSinceEpoch();
+    sounding = now;
+}
+
+inline void noteFrame(const QImage &frame)
+{
+    static bool white = false;
+    const bool now = qGray(frame.pixel(frame.width() / 2, frame.height() / 2)) > 128;
+    if (now && !white)
+        qInfo().noquote() << "JT_TEST flash" << QDateTime::currentMSecsSinceEpoch();
+    white = now;
 }
 
 inline float toneSample(qint64 intervalPosition, int sampleRate)

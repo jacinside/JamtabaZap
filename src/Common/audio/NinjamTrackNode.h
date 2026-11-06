@@ -3,6 +3,7 @@
 
 #include "core/AudioNode.h"
 #include <QByteArray>
+#include "video/SyncedVideoStream.h"
 #include "SamplesBufferResampler.h"
 #include "readerwriterqueue.h"
 
@@ -29,7 +30,10 @@ public:
 
     explicit NinjamTrackNode(int ID);
     virtual ~NinjamTrackNode();
-    void addVorbisEncodedInterval(const QByteArray &fullIntervalBytes);
+    void addVorbisEncodedInterval(const QByteArray &fullIntervalBytes, const ninjam::MessageGuid &GUID = ninjam::MessageGuid());
+
+    // Which audio intervals this channel is playing, for matching video to them.
+    AudioIntervalState getAudioIntervalState();
     void addVorbisEncodedChunk(const QByteArray &chunkBytes, bool isFirstPart, bool isLastPart);
     void processReplacing(const audio::SamplesBuffer &in, audio::SamplesBuffer &out, int sampleRate,
                           std::vector<midi::MidiMessage> &midiBuffer) override;
@@ -97,6 +101,10 @@ private:
     class IntervalDecoder;
 
     QList<std::shared_ptr<IntervalDecoder>> decoders;
+    QList<ninjam::MessageGuid> queuedGuids; // one per interval in decoders (Intervalic mode)
+    ninjam::MessageGuid currentGuid;
+    ninjam::MessageGuid previousGuid;
+    bool playingGuid = false;
     std::shared_ptr<IntervalDecoder> currentDecoder;
     QMutex decodersMutex;
 
