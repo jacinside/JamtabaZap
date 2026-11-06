@@ -5,6 +5,8 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QImage>
+#include <QVector>
+#include <algorithm>
 #include <QtGlobal>
 
 // Test mode (env JT_TEST_AVMARKS=1) to measure audio/video sync at a receiver: at the same
@@ -32,6 +34,26 @@ inline QImage frame(const QSize &size, qint64 intervalPosition, int sampleRate)
 {
     QImage image(size, QImage::Format_RGB32);
     image.fill(isMarked(intervalPosition, sampleRate) ? Qt::white : Qt::black);
+
+    // JT_TEST_AVMARKS=detail: a moving noise pattern, for the encoder to have real work to do.
+    static const bool detail = qgetenv("JT_TEST_AVMARKS") == "detail";
+    if (detail && !isMarked(intervalPosition, sampleRate)) {
+        static QVector<QRgb> noise;
+        if (noise.isEmpty()) {
+            noise.resize(1 << 18);
+            quint32 seed = 12345;
+            for (auto &value : noise) {
+                seed = seed * 1664525u + 1013904223u;
+                value = 0xFF000000u | (seed >> 8);
+            }
+        }
+        const int shift = static_cast<int>(intervalPosition / 512);
+        for (int y = 0; y < size.height(); ++y) {
+            auto line = reinterpret_cast<QRgb *>(image.scanLine(y));
+            const auto from = (y * 1009 + shift * 37) % (noise.size() - size.width());
+            std::copy_n(noise.constData() + from, size.width(), line);
+        }
+    }
     return image;
 }
 

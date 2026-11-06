@@ -65,7 +65,9 @@ void VideoWidget::updateScaledImage()
 
     targetRect = QRect(targetX, targetY, targetWidth, targetHeight);
 
-    scaledImage = currentImage.scaled(targetRect.size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    // Every frame of live video goes through here: frames already come close to this size.
+    const bool close = currentImage.width() <= targetRect.width() * 2;
+    scaledImage = currentImage.scaled(targetRect.size(), Qt::KeepAspectRatio, close ? Qt::FastTransformation : Qt::SmoothTransformation);
 }
 
 void VideoWidget::resizeEvent(QResizeEvent *ev)

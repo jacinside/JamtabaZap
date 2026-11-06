@@ -496,6 +496,7 @@ void NinjamTrackGroupView::updateGuiElements()
     // video
     auto ninjamController = mainController->getNinjamController();
     if (ninjamController) {
+        syncedVideo->setDisplayWidth(videoWidget->isVisible() ? videoWidget->width() : 0);
         int liveDelayMs = 0;
         visitTracks<NinjamTrackView>([&liveDelayMs](NinjamTrackView *track) {
             liveDelayMs = qMax(liveDelayMs, track->getVoiceLatencyMs());

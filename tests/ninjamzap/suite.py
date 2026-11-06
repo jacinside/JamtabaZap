@@ -891,6 +891,52 @@ def s_receive_video_off(ctx):
     check(on > 800 * 1024, f"on again, it does ({on / 1024:.0f} KB in 2 intervals)")
 
 
+def s_encoder_keeps_up_hd(ctx):
+    ctx.server = Server(ctx.dir)
+    ctx.sniff = Sniffer(ctx.server.port)
+    ctx.jt = Jamtaba(ctx.dir, marks="detail")
+    ctx.jt.cmd("video 2")
+    ctx.jt.connect(ctx.server.port)
+    ctx.jt.cmd("camera on")
+    check(ctx.sniff.wait_intervals(USER, "H264", 3), "HD video running, with detail")
+    samples, rss = [], []
+    for _ in range(20):
+        time.sleep(2)
+        samples.append(cpu_percent(ctx.jt.proc.pid))
+        rss.append(ctx.jt.rss_mb())
+    done = [v for v in ctx.sniff.of(USER, "H264") if v["guid"] in ctx.sniff.ended]
+    path, frames, size = interval_stream(ctx, done[-1], "hd.h264")
+    real = size * 8 / INTERVAL / 1000
+    print(f"    {len(frames) / INTERVAL:.1f} fps, {real:.0f} kbps, CPU {statistics.mean(samples[3:]):.0f}%, RSS {rss[2]:.0f} -> {rss[-1]:.0f} MB")
+    ctx.metrics.update(fps=round(len(frames) / INTERVAL, 1), kbps=round(real), cpu=round(statistics.mean(samples[3:])), rss=round(max(rss)))
+    check(stream_size(path) == (1280, 720), "HD")
+    check(real <= 1200 * 1.5, f"within its bitrate ({real:.0f} kbps)")
+    check(rss[-1] < rss[2] + 150, f"memory doesn't pile up ({rss[2]:.0f} -> {rss[-1]:.0f} MB)")
+
+
+def s_slow_encoder_drops_frames(ctx):
+    # Like a machine that can't encode HD at full rate: 100 ms per frame, about 10 fps of the 24 asked for.
+    ctx.server = Server(ctx.dir)
+    ctx.sniff = Sniffer(ctx.server.port)
+    ctx.jt = Jamtaba(ctx.dir, marks="detail", extra_env={"JT_TEST_ENCODE_DELAY_MS": "100"})
+    ctx.jt.cmd("video 2")
+    ctx.jt.connect(ctx.server.port)
+    ctx.jt.cmd("camera on")
+    check(ctx.sniff.wait_intervals(USER, "H264", 2), "video running on a slow encoder")
+    rss = []
+    for _ in range(20):
+        time.sleep(2)
+        rss.append(ctx.jt.rss_mb())
+    print(f"    RSS {rss[0]:.0f} -> {rss[-1]:.0f} MB")
+    ctx.metrics.update(rss_start=round(rss[0]), rss_end=round(rss[-1]))
+    check(rss[-1] < rss[0] + 150, f"frames don't pile up in memory ({rss[0]:.0f} -> {rss[-1]:.0f} MB)")
+    done = [v for v in ctx.sniff.of(USER, "H264") if v["guid"] in ctx.sniff.ended]
+    _, frames, _ = interval_stream(ctx, done[-1], "slow.h264")
+    print(f"    {len(frames) / INTERVAL:.1f} fps")
+    check(4 <= len(frames) / INTERVAL <= 14, f"video goes on at what the encoder can do ({len(frames) / INTERVAL:.1f} fps)")
+    check("can't keep up" in ctx.jt.log(), "and the log says so")
+
+
 def stress(ctx, remote_users):
     join(ctx, camera=False)
     ctx.jt.cmd("video 2")
@@ -958,6 +1004,8 @@ SCENARIOS = [
     ("video preset change", s_video_preset_change),
     ("legacy server stays sd", s_legacy_server_stays_sd),
     ("audio presets", s_audio_presets),
+    ("encoder keeps up hd", s_encoder_keeps_up_hd),
+    ("slow encoder drops frames", s_slow_encoder_drops_frames),
     ("hd jamtaba to jamtaba", s_hd_jamtaba_to_jamtaba),
     ("receive video off", s_receive_video_off),
     ("stress six hd", s_stress_six_hd),

@@ -496,16 +496,22 @@ bool MainWindow::cameraIsActivated() const
     return cameraView && cameraView->isActivated();
 }
 
-QImage MainWindow::pickCameraFrame() const
+QImage MainWindow::pickCameraFrame()
 {
     if (videoFrameGrabber && cameraView) {
         auto frame = videoFrameGrabber->grab();
-        cameraView->setCurrentFrame(frame);
+
+        // The preview is small, and doesn't have to follow every frame.
+        const auto now = QDateTime::currentMSecsSinceEpoch();
+        if (now - lastCameraPreview >= 100 && !frame.isNull()) {
+            lastCameraPreview = now;
+            cameraView->setCurrentFrame(frame.width() > 480 ? frame.scaledToWidth(480, Qt::FastTransformation) : frame);
+        }
 
         // Fitted to the preset without deforming it: the camera's proportions rarely match.
         const auto target = mainController->getVideoResolution();
         if (!frame.isNull() && frame.size() != target) {
-            const auto scaled = frame.scaled(target, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+            const auto scaled = frame.scaled(target, Qt::KeepAspectRatioByExpanding, Qt::FastTransformation);
             return scaled.copy((scaled.width() - target.width()) / 2, (scaled.height() - target.height()) / 2,
                                target.width(), target.height());
         }
@@ -1136,6 +1142,7 @@ void MainWindow::closeContentTab(int index)
     if (index > 0) { // the first tab (rooms to play) is not closeable
         if (index == 1) { // jam tab
             showBusyDialog(tr("disconnecting ..."));
+            qInfo() << "Leaving the room: jam tab closed";
             if (mainController->isPlayingInNinjamRoom())
                 mainController->stopNinjamController();
         }
@@ -1425,6 +1432,7 @@ void MainWindow::tryEnterInRoom(const login::RoomInfo &roomInfo, const QString &
         roomToJump.reset(new login::RoomInfo(roomInfo));
         passwordToJump = password;
 
+        qInfo() << "Leaving the room: joining another one";
         mainController->stopNinjamController(); // disconnect from current ninjam server
     }
     else if (mainController->userNameWasChoosed()) {

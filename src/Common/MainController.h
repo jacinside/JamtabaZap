@@ -376,6 +376,7 @@ protected:
     bool waitingVideoKeyFrame = false;
     bool videoPresetPending = false;
     void applyVideoPreset();
+    void reportSkippedVideoFrames();
     bool videoParameterSetsSent = false;
     quint32 videoIntervalCounter = 0;
     void beginSyncedVideoInterval(const ninjam::MessageGuid &audioGuid);

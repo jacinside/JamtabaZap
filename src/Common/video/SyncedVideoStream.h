@@ -46,6 +46,8 @@ public:
 
     bool isPlaying() const { return static_cast<bool>(playing); }
 
+    void setDisplayWidth(int width);
+
 signals:
     void frameDecoded(const QImage &frame);
 

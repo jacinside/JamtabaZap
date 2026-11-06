@@ -108,7 +108,7 @@ public:
 
     virtual TextEditorModifier *createTextEditorModifier() = 0;
 
-    QImage pickCameraFrame() const;
+    QImage pickCameraFrame();
 
     bool cameraIsActivated() const;
 
@@ -277,6 +277,7 @@ private:
     void initializeTestControl();
     void runTestCommand(const QStringList &args);
     void addVideoChannel();
+    qint64 lastCameraPreview = 0;
     void selectVideoPreset(int preset);
 
 private slots:

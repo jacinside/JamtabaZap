@@ -480,8 +480,17 @@ void MainController::endSyncedVideoInterval()
     }
 }
 
+void MainController::reportSkippedVideoFrames()
+{
+    const auto skipped = videoEncoder.takeSkippedFrames();
+    if (skipped > 0)
+        qInfo() << "Video encoder can't keep up: skipped" << skipped << "frames in the last interval";
+}
+
 void MainController::beginSyncedVideoInterval(const ninjam::MessageGuid &audioGuid)
 {
+    reportSkippedVideoFrames();
+
     endSyncedVideoInterval();
 
     videoIntervalToUpload.reset(new UploadIntervalData()); // generate a new GUID

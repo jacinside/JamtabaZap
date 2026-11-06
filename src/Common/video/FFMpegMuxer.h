@@ -33,6 +33,7 @@ public:
     // Opens the encoder again before the next frame, with the current size, rate and bitrate.
     void restart();
     void setVideoBitRate(uint bitRate);
+    int takeSkippedFrames() { return skippedFrames.exchange(0); }
 
     void encodeImage(const QImage &image, bool async = true);
     void encodeAudioFrame();
@@ -114,6 +115,10 @@ private:
     bool startNewIntervalRequested;
     bool continuousMode;
     std::atomic_bool keyFrameRequested;
+    std::atomic_int pendingFrames;
+    std::atomic_int skippedFrames;
+    SwsContext *rgbToYuvContext;
+    static constexpr int MAX_PENDING_FRAMES = 2;
 
     QThreadPool threadPool;
 };

@@ -1,4 +1,5 @@
 #include "FFMpegMuxer.h"
+#include <QThread>
 
 #include <cstring>
 
@@ -92,7 +93,10 @@ FFMpegMuxer::FFMpegMuxer(QObject *parent) :
       initialized(false),
       startNewIntervalRequested(false),
       continuousMode(false),
-      keyFrameRequested(false)
+      keyFrameRequested(false),
+      pendingFrames(0),
+      skippedFrames(0),
+      rgbToYuvContext(nullptr)
 {
     av_register_all();
 
@@ -115,6 +119,9 @@ void FFMpegMuxer::initialize()
 FFMpegMuxer::~FFMpegMuxer()
 {
     finish();
+    threadPool.waitForDone();
+    if (rgbToYuvContext)
+        sws_freeContext(rgbToYuvContext);
 }
 
 void FFMpegMuxer::finish()
@@ -127,7 +134,21 @@ void FFMpegMuxer::encodeImage(const QImage &image, bool async)
 {
     // encoding in a separated thread
 
+    // The encoder may not keep up: frames are skipped rather than piling up, which would use more
+    // memory and send them later and later.
+    if (async && pendingFrames >= MAX_PENDING_FRAMES) {
+        skippedFrames++;
+        return;
+    }
+    pendingFrames++;
+
     auto lambda = [=](){
+        struct Done { std::atomic_int &count; ~Done() { count--; } } done { pendingFrames };
+
+        static const int testDelay = qEnvironmentVariableIntValue("JT_TEST_ENCODE_DELAY_MS");
+        if (testDelay > 0)
+            QThread::msleep(testDelay);
+
 
         if (startNewIntervalRequested) {
             if (prepareToEncodeNewInterval())
@@ -293,7 +314,9 @@ bool FFMpegMuxer::addVideoStream(AVCodecID codecID, AVDictionary **opts)
     codecContext->pix_fmt = AV_PIX_FMT_YUV420P;
 
     if (codecContext->codec_id == AV_CODEC_ID_H264) {
-        int ret = av_dict_set(opts, "preset", "veryfast", 0);
+        // HD costs about nine times as many pixels as SD per frame, and more frames
+        const bool big = videoResolution.width() > 640;
+        int ret = av_dict_set(opts, "preset", big ? "superfast" : "veryfast", 0);
         if (ret != 0) {
             qCritical() << "Error setting h264 preset" << av_error_to_qt_string(ret) << ret;
             return false;
@@ -512,7 +535,6 @@ bool FFMpegMuxer::openVideoCodec(AVCodec *codec, AVDictionary **opts)
 
 void FFMpegMuxer::imageToYuvPicture(const QImage &image, AVFrame *picture, int width, int height)
 {
-
     if (!picture)
         return;
 
@@ -520,22 +542,17 @@ void FFMpegMuxer::imageToYuvPicture(const QImage &image, AVFrame *picture, int w
     width = qMin(width, image.width());
     height = qMin(height, image.height());
 
-    // Preparing the buffer to get YUV420P data
-    auto size = av_image_get_buffer_size(AV_PIX_FMT_YUV420P, width, height, 1);
-    auto pic_dat = (uint8_t *) av_malloc(size);
+    const auto rgb = image.format() == QImage::Format_RGB32 ? image : image.convertToFormat(QImage::Format_RGB32);
 
-    // Transforming data from RGB to YUV420P
-    RGBtoYUV420P(image.bits(), pic_dat, image.depth()/8, true, width, height);
+    rgbToYuvContext = sws_getCachedContext(rgbToYuvContext, width, height, AV_PIX_FMT_BGRA, width, height, AV_PIX_FMT_YUV420P,
+                                           SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
+    if (!rgbToYuvContext)
+        return;
 
+    const uint8_t *source[4] = { rgb.constBits(), nullptr, nullptr, nullptr };
+    const int stride[4] = { static_cast<int>(rgb.bytesPerLine()), 0, 0, 0 };
     picture->quality = 0;
-
-    // Copying into the frame's own buffers: an encoder can read them after avcodec_send_frame returns.
-    uint8_t *sourceData[4];
-    int sourceLineSize[4];
-    av_image_fill_arrays(sourceData, sourceLineSize, pic_dat, AV_PIX_FMT_YUV420P, width, height, 1);
-    av_image_copy(picture->data, picture->linesize, const_cast<const uint8_t **>(sourceData), sourceLineSize,
-                  AV_PIX_FMT_YUV420P, width, height);
-    av_free(pic_dat);
+    sws_scale(rgbToYuvContext, source, stride, 0, height, picture->data, picture->linesize);
 }
 
 void FFMpegMuxer::RGBtoYUV420P(const uint8_t *bufferRGB, uint8_t *bufferYUV, uint rgbIncrement, bool swapRGB, int width, int height)

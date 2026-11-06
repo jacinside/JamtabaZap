@@ -95,6 +95,8 @@ public:
     }
 
     // avcc: NAL units with 4-byte lengths. Returns an image if the frame came out and wantImage.
+    void setDisplayWidth(int width) { displayWidth = width; }
+
     QImage decode(const QByteArray &avcc, bool wantImage)
     {
         if (!context)
@@ -136,7 +138,9 @@ public:
 private:
     QImage toImage()
     {
-        const int width = qMin(decoded->width, MAX_DECODED_WIDTH) & ~1;
+        // Converting straight to the size on screen is much cheaper than scaling the image afterwards.
+        const int shownWidth = displayWidth.load();
+        const int width = qBound(160, qMin(shownWidth > 0 ? shownWidth : MAX_DECODED_WIDTH, decoded->width), MAX_DECODED_WIDTH) & ~1;
         const int height = (decoded->height * width / qMax(decoded->width, 1)) & ~1;
         if (width <= 0 || height <= 0)
             return QImage();
@@ -172,6 +176,7 @@ private:
     QByteArray currentParameterSets;
     QByteArray headers;
     bool sendHeaders = false;
+    std::atomic_int displayWidth { 0 };
 };
 
 SyncedVideoStream::SyncedVideoStream(QObject *parent) :
@@ -187,6 +192,11 @@ SyncedVideoStream::~SyncedVideoStream()
 {
     decodingThread.clear();
     decodingThread.waitForDone();
+}
+
+void SyncedVideoStream::setDisplayWidth(int width)
+{
+    decoder->setDisplayWidth(width);
 }
 
 void SyncedVideoStream::beginInterval(const ninjam::MessageGuid &guid)
