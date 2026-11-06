@@ -4,6 +4,7 @@
 #include "midi/MidiMessage.h"
 #include "audio/PortAudioDriver.h"
 #include "audio/core/LocalInputNode.h"
+#include "audio/core/Plugins.h"
 #ifndef JT_NO_VST2
 #include "vst/VstPlugin.h"
 #include "vst/VstHost.h"
