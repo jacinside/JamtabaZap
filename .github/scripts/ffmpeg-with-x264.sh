@@ -10,10 +10,13 @@ X264=$(find / -name x264.h -not -path '/proc/*' 2>/dev/null | head -1)
 PREFIX=$(dirname "$(dirname "$LIB")")
 X264_PREFIX=$(dirname "$(dirname "$X264")")
 echo "FFmpeg prefix: $PREFIX, x264: $X264_PREFIX"
+# Without nasm, FFmpeg builds without its assembly: decoding and color conversion take far more CPU.
+apt-get update -qq && apt-get install -y -qq nasm > /dev/null
+nasm -v
 git clone --quiet --depth 1 -b n4.4.1 https://github.com/FFmpeg/FFmpeg.git /tmp/ffmpeg
 cd /tmp/ffmpeg
 ARGS=(--prefix="$PREFIX" --enable-gpl --enable-libx264 --enable-static --disable-shared --enable-pic
-      --disable-programs --disable-doc --disable-debug --disable-x86asm
+      --disable-programs --disable-doc --disable-debug
       --extra-cflags="-I$X264_PREFIX/include" --extra-ldflags="-L$X264_PREFIX/lib"
       --pkg-config-flags=--static)
 if [ -n "$CROSS" ]; then
@@ -24,7 +27,8 @@ else
     sed -i 's/require_pkg_config libx264 x264 "stdint.h x264.h" x264_encoder_encode/require libx264 "stdint.h x264.h" x264_encoder_encode -lx264 -lpthread -ldl -lm/' configure
 fi
 ./configure "${ARGS[@]}" > /tmp/ffmpeg-configure.log 2>&1 || { tail -30 ffbuild/config.log; exit 1; }
-grep -E 'libx264|^install prefix' /tmp/ffmpeg-configure.log | head -5 || true
+grep -E 'libx264|^install prefix|^x86 assembler' /tmp/ffmpeg-configure.log | head -5 || true
+grep -q '^x86 assembler.*nasm' /tmp/ffmpeg-configure.log || { echo "FFmpeg would build without assembly"; exit 1; }
 make -j"$(nproc)" > /tmp/ffmpeg-make.log 2>&1 || { tail -30 /tmp/ffmpeg-make.log; exit 1; }
 make install > /dev/null
 grep -q libx264 "$PREFIX/lib/libavcodec.a" || { echo "libx264 didn't make it into libavcodec.a"; exit 1; }
