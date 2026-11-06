@@ -1,6 +1,7 @@
 #include "SyncedVideoStream.h"
 #include "FFMpegCommon.h"
 
+#include <QDateTime>
 #include <QDebug>
 #include <QMutex>
 #include <QtConcurrent/QtConcurrent>
@@ -13,7 +14,7 @@ namespace {
 
 constexpr int MAX_HELD_SWAPS = 4;
 constexpr int MAX_AWAITING = 2;
-constexpr int MAX_DECODED_WIDTH = 640; // the tile is small: no need to keep HD images around
+constexpr int MAX_DECODED_WIDTH = 1280;
 
 bool isZero(const ninjam::MessageGuid &guid)
 {
@@ -31,6 +32,20 @@ quint32 readBE32(const QByteArray &data, int offset = 0)
 }
 
 const QByteArray START_CODE("\x00\x00\x00\x01", 4);
+
+// [2B SPS length][SPS][2B PPS length][PPS], with lengths that fill the chunk exactly and the right
+// NAL types. A single byte isn't enough: a frame's length, like 00 00 07 80, can look like the start.
+bool isParameterSets(const QByteArray &chunk)
+{
+    auto p = reinterpret_cast<const uchar *>(chunk.constData());
+    if (chunk.size() < 6)
+        return false;
+    const int spsSize = (p[0] << 8) | p[1];
+    if (spsSize == 0 || 2 + spsSize + 2 >= chunk.size() || (p[2] & 0x1F) != 7)
+        return false;
+    const int ppsSize = (p[2 + spsSize] << 8) | p[3 + spsSize];
+    return ppsSize > 0 && 2 + spsSize + 2 + ppsSize == chunk.size() && (p[4 + spsSize] & 0x1F) == 8;
+}
 
 }
 
@@ -161,6 +176,8 @@ private:
 
 SyncedVideoStream::SyncedVideoStream(QObject *parent) :
     QObject(parent),
+    framesDecoded(std::make_shared<std::atomic_int>(0)),
+    framesShown(std::make_shared<std::atomic_int>(0)),
     decoder(std::make_shared<SyncedVideoDecoder>())
 {
     decodingThread.setMaxThreadCount(1);
@@ -218,8 +235,8 @@ void SyncedVideoStream::parse(Interval &interval)
         if (interval.chunkIndex == 0 && chunk.size() == 20) {
             std::copy_n(chunk.constData() + 4, 16, interval.audioGuid.data());
             interval.hasMarker = true;
-        } else if (chunk.size() > 3 && (static_cast<uchar>(chunk[2]) & 0x1F) == 7 && chunk[0] == 0) {
-            interval.parameterSets = chunk; // [2B SPS length][SPS 0x67...], never a frame's 4-byte length
+        } else if (isParameterSets(chunk)) {
+            interval.parameterSets = chunk;
         } else if (!chunk.isEmpty()) {
             interval.frames.append(chunk);
         }
@@ -229,14 +246,19 @@ void SyncedVideoStream::parse(Interval &interval)
 
 void SyncedVideoStream::play(const IntervalPtr &interval, const char *match)
 {
+    if (qEnvironmentVariableIsSet("JT_TEST_CONTROL"))
+        qInfo() << "JT_TEST video play match" << match << "frames" << interval->frames.size()
+                << "previous" << (playing ? playing->frames.size() : 0) << "requested" << framesRequested
+                << "decoded" << framesDecoded->exchange(0) << "tickgap" << worstTickGap;
+    worstTickGap = 0;
+    if (qEnvironmentVariableIsSet("JT_TEST_CONTROL"))
+        qInfo().noquote() << "JT_TEST shown" << framesShown->exchange(0);
+
     if (playing)
         lastFrameCount = playing->frames.size();
 
     playing = interval;
     framesRequested = 0;
-
-    if (qEnvironmentVariableIsSet("JT_TEST_CONTROL"))
-        qInfo() << "JT_TEST video play match" << match << "frames" << interval->frames.size();
 }
 
 void SyncedVideoStream::swap(const QList<AudioIntervalState> &audio)
@@ -297,6 +319,11 @@ void SyncedVideoStream::swap(const QList<AudioIntervalState> &audio)
 
 void SyncedVideoStream::tick(double progress)
 {
+    const auto now = QDateTime::currentMSecsSinceEpoch();
+    if (lastTick)
+        worstTickGap = qMax(worstTickGap, now - lastTick);
+    lastTick = now;
+
     if (!playing || playing->frames.isEmpty())
         return;
 
@@ -312,15 +339,19 @@ void SyncedVideoStream::tick(double progress)
     framesRequested = target;
 
     auto decoderRef = decoder;
+    auto decodedCount = framesDecoded;
+    auto shownCount = framesShown;
     QPointer<SyncedVideoStream> self(this);
     QtConcurrent::run(&decodingThread, [=]() {
         if (!interval->parameterSets.isEmpty())
             decoderRef->setParameterSets(interval->parameterSets);
         QImage image;
         for (int i = from; i < target; ++i)
-            image = decoderRef->decode(interval->frames.at(i), i == target - 1);
-        if (!image.isNull() && self)
+            image = decoderRef->decode(interval->frames.at(i), i == target - 1), (*decodedCount)++;
+        if (!image.isNull() && self) {
+            (*shownCount)++;
             emit self->frameDecoded(image);
+        }
         return 0;
     });
 }

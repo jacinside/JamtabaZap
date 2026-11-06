@@ -7,6 +7,7 @@
 #include <QMap>
 #include <QObject>
 #include <QThreadPool>
+#include <atomic>
 #include <memory>
 #include <ninjam/Ninjam.h>
 
@@ -69,6 +70,10 @@ private:
     QList<IntervalPtr> awaiting;
     IntervalPtr playing;
     int framesRequested = 0;
+    std::shared_ptr<std::atomic_int> framesDecoded;
+    std::shared_ptr<std::atomic_int> framesShown;
+    qint64 lastTick = 0;
+    qint64 worstTickGap = 0;
     int lastFrameCount = 0;
 
     std::shared_ptr<SyncedVideoDecoder> decoder;
