@@ -11,7 +11,7 @@ linux{
 }
 
 # the VstScanner executable is generated in the Standalone folder
-macx:DESTDIR = $$OUT_PWD/../Standalone/Jamtaba2.app/Contents/MacOS
+macx:DESTDIR = $$OUT_PWD/../Standalone/JamtabaZap.app/Contents/MacOS
 linux:DESTDIR = $$OUT_PWD/../Standalone
 win32{
     CONFIG(debug, debug|release) {
@@ -30,7 +30,7 @@ SOURCE_PATH = $$ROOT_PATH/src
 
 INCLUDEPATH += $$SOURCE_PATH/Common
 INCLUDEPATH += $$SOURCE_PATH/Scanners
-INCLUDEPATH += $$ROOT_PATH/VST_SDK/VST2_SDK/pluginterfaces/vst2.x
+INCLUDEPATH += $$SOURCE_PATH/third_party/fst
 
 VPATH       += $$SOURCE_PATH/Common
 VPATH       += $$SOURCE_PATH/Scanners

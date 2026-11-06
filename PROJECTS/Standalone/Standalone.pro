@@ -1,13 +1,12 @@
 TARGET = JamtabaZap
 TEMPLATE = app
 
-# VST2 plugin hosting needs Steinberg's SDK, which can't be redistributed.
-# Build with CONFIG-=no_vst2 and a VST2 SDK in VST_SDK/ to bring it back.
-CONFIG += no_vst2
+# VST2 plugin hosting uses FST, a free implementation of the interface (src/third_party/fst).
+# Build with CONFIG+=no_vst2 to leave it out.
 no_vst2 {
     DEFINES += JT_NO_VST2
 } else {
-    INCLUDEPATH += $$VST_SDK_PATH/VST2_SDK/pluginterfaces/vst2.x
+    INCLUDEPATH += $$PWD/../../src/third_party/fst
     HEADERS += vst/VstPlugin.h vst/VstHost.h vst/VstLoader.h vst/Utils.h
     SOURCES += vst/VstPlugin.cpp vst/VstHost.cpp vst/Utils.cpp vst/VstLoader.cpp
 }

@@ -19,12 +19,12 @@ A fork of [JamTaba](https://github.com/elieserdejesus/JamTaba), based on [defter
 
 ## Known limits
 
-- VST2 plugin hosting isn't included in this beta, nor is the VST/AU plugin version of JamTaba.
+- VST2 plugins can be used inside JamtabaZap. Using JamtabaZap itself as a plugin in another program isn't included in this beta.
 - HD takes a lot of CPU on older computers. When the encoder can't keep up, frames are skipped: choose VGA or SD if your computer struggles.
 
 ## Credits and license
 
-All credit for JamTaba goes to its author, Elieser de Jesus, and its contributors, and to defterai for the version this fork builds on. JamTaba has no license file ([issue #1210](https://github.com/elieserdejesus/JamTaba/issues/1210)), and this fork doesn't add one. The Steinberg VST2 SDK files that come with JamTaba have been removed here; they remain in the history inherited from the original repository.
+All credit for JamTaba goes to its author, Elieser de Jesus, and its contributors, and to defterai for the version this fork builds on. JamTaba has no license file ([issue #1210](https://github.com/elieserdejesus/JamTaba/issues/1210)), and this fork doesn't add one. The Steinberg VST2 SDK files that come with JamTaba have been removed here; they remain in the history inherited from the original repository. VST2 plugins are hosted through [FST](https://git.iem.at/zmoelnig/FST), a free implementation of the interface under the GPL (`src/third_party/fst`).
 
 The commits on top of JamTaba are kept small so that they can be moved onto newer versions of it.
 

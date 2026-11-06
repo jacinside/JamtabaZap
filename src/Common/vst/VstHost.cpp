@@ -204,7 +204,7 @@ VstIntPtr VSTCALLBACK VstHost::hostCallback(AEffect *effect, VstInt32 opcode, Vs
             for (int i = 0; i < vstEvents->numEvents; ++i) {
                 if (vstEvents->events[i]->type == kVstMidiType) {
                     VstMidiEvent *vstMidiEvent = (VstMidiEvent *)vstEvents->events[i];
-                    auto msg = midi::MidiMessage::fromArray(vstMidiEvent->midiData);
+                    auto msg = midi::MidiMessage::fromArray(reinterpret_cast<const char *>(vstMidiEvent->midiData));
                     hostInstance->receivedMidiMessages.push_back(msg);
                 }
             }

@@ -11,8 +11,6 @@
 
 #define MAX_MIDI_EVENTS 64 // in my tests playing piano I can genenerate just 3 messages per block (256 samples) at maximum
 
-struct VstEvents;
-
 namespace vst {
 
 class VstHost;
