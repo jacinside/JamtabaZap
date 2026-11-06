@@ -132,9 +132,9 @@ win32{
     }
 
     CONFIG(release, debug|release) {
-        LIBS += -lportaudio -lvorbisfile -lvorbis -logg -lx264 -lavcodec -lavutil -lavformat -lswscale -lswresample -lminiupnpc
+        LIBS += -lportaudio -lvorbisfile -lvorbis -logg -lavcodec -lavutil -lavformat -lswscale -lswresample -lminiupnpc -lx264
     } else:CONFIG(debug, debug|release) {
-        LIBS += -lportaudiod -lvorbisfiled -lvorbisd -loggd -lx264 -lavcodecd -lavutild -lavformatd -lswscaled -lswresample -lminiupnpcd
+        LIBS += -lportaudiod -lvorbisfiled -lvorbisd -loggd -lavcodecd -lavutild -lavformatd -lswscaled -lswresample -lminiupnpcd -lx264
     }
 
     CONFIG(release, debug|release) {
