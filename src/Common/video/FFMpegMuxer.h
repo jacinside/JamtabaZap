@@ -30,6 +30,10 @@ public:
     void setContinuousMode(bool continuous);
     void requestKeyFrame();
 
+    // Opens the encoder again before the next frame, with the current size, rate and bitrate.
+    void restart();
+    void setVideoBitRate(uint bitRate);
+
     void encodeImage(const QImage &image, bool async = true);
     void encodeAudioFrame();
 
@@ -113,6 +117,11 @@ private:
 
     QThreadPool threadPool;
 };
+
+inline void FFMpegMuxer::setVideoBitRate(uint bitRate)
+{
+    this->videoBitRate = bitRate;
+}
 
 inline void FFMpegMuxer::setVideoQuality(VideoQuality quality)
 {

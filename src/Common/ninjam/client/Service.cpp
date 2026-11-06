@@ -348,9 +348,20 @@ void Service::sendUserMask(const QString &userFullName, quint32 extraChannels)
         if (channel.isActive())
             channelsMask |= 1u << channel.getIndex();
     }
-    if (videoChannels.contains(userFullName))
+    if (receiveVideo && videoChannels.contains(userFullName))
         channelsMask |= 1u << videoChannels.value(userFullName);
     sendMessageToServer(ClientSetUserMask(userFullName, channelsMask));
+}
+
+void Service::setReceiveVideo(bool receive)
+{
+    if (receive == receiveVideo)
+        return;
+    receiveVideo = receive;
+    if (currentServer) {
+        for (auto it = videoChannels.constBegin(); it != videoChannels.constEnd(); ++it)
+            sendUserMask(it.key());
+    }
 }
 
 void Service::process(const DownloadIntervalBegin &msg)

@@ -277,6 +277,7 @@ private:
     void initializeTestControl();
     void runTestCommand(const QStringList &args);
     void addVideoChannel();
+    void selectVideoPreset(int preset);
 
 private slots:
 

@@ -80,6 +80,7 @@ HEADERS += audio/Resampler.h
 HEADERS += video/FFMpegMuxer.h
 HEADERS += video/NinjamZapVideoPacker.h
 HEADERS += video/TestAvMarks.h
+HEADERS += video/VideoPresets.h
 HEADERS += video/SyncedVideoStream.h
 HEADERS += video/FFMpegDemuxer.h
 HEADERS += video/VideoFrameGrabber.h

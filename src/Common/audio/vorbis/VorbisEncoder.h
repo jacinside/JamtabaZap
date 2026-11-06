@@ -17,6 +17,7 @@ class Encoder : public AudioEncoder
 public:
     Encoder();
     Encoder(uint channels, uint sampleRate, float quality);
+    Encoder(uint channels, uint sampleRate, int bitrateKbps);
     ~Encoder();
 
     QByteArray encode(const audio::SamplesBuffer &audioBuffer) override;
@@ -40,7 +41,7 @@ private:
 
     QByteArray outBuffer;
 
-    void init(uint channels, uint sampleRate, float quality);
+    void init(uint channels, uint sampleRate, float quality, int bitrateKbps = 0);
 
     void encodeFirstVorbisHeaders();
     void clearState();

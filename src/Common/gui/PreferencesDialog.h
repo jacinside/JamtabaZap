@@ -41,7 +41,9 @@ signals:
     void jamRecorderStatusChanged(const QString &writerId, bool status);
     void recordingPathSelected(const QString &newRecordingPath);
     void jamDateFormatChanged(QString dateFormat);
-    void encodingQualityChanged(float newEncodingQuality);
+    void audioBitrateChanged(int kbps);
+    void videoPresetChanged(int preset);
+    void receiveVideoChanged(bool receive);
     void looperAudioEncodingFlagChanged(bool savingEncodedAudio);
     void looperWaveFilesBitDepthChanged(quint8 bitDepth);
     void looperFolderChanged(const QString &newLoopsFolder);
@@ -69,6 +71,7 @@ private slots:
 
 private:
     void populateEncoderQualityComboBox();
+    void createVideoTab();
     bool usingCustomEncodingQuality();
     QString selectAudioFile(QString caption, QString initialDir);
     void refreshMetronomeControlsStyleSheet();

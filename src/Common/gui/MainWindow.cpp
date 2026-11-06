@@ -277,25 +277,20 @@ void MainWindow::initializeCamera(const QString &cameraDeviceName)
 
 QSize MainWindow::getBestCameraResolution(const QList<QSize> resolutions) const
 {
-    auto bestResolution = MainController::MAX_VIDEO_SIZE;
-
-    if (!resolutions.isEmpty()) {
-        auto lowestResolution = resolutions.first();
-        if (lowestResolution.width() > MainController::MAX_VIDEO_SIZE.width()) { // using the lowest resolution in big resolution cams
-            bestResolution = lowestResolution;
-        }
-        else { // pick the first resolution where width < 320
-            for (int i = resolutions.size() - 1; i >= 0;  --i) {
-                if (resolutions.at(i).width() <= MainController::MAX_VIDEO_SIZE.width()) {
-                    bestResolution = resolutions.at(i);
-                    break;
-                }
-            }
-            //bestResolution = resolutions.first();
-        }
+    // The smallest one that covers the preset; frames are then fitted to it. Else the biggest.
+    const auto target = mainController->currentVideoPreset().size;
+    QSize best;
+    QSize biggest;
+    for (const auto &size : resolutions) {
+        if (size.width() * size.height() > biggest.width() * biggest.height())
+            biggest = size;
+        const bool covers = size.width() >= target.width() && size.height() >= target.height();
+        if (covers && (best.isEmpty() || size.width() * size.height() < best.width() * best.height()))
+            best = size;
     }
-
-    return bestResolution;
+    if (!best.isEmpty())
+        return best;
+    return biggest.isEmpty() ? target : biggest;
 }
 
 void MainWindow::initializeTestControl()
@@ -332,6 +327,12 @@ void MainWindow::runTestCommand(const QStringList &args)
         mainController->setTransmitingStatus(0, on);
     } else if (cmd == QStringLiteral("voice")) {
         setVoiceChatStatus(0, on);
+    } else if (cmd == QStringLiteral("video")) {
+        selectVideoPreset(args.value(1).toInt());
+    } else if (cmd == QStringLiteral("receivevideo")) {
+        mainController->setReceiveVideo(on);
+    } else if (cmd == QStringLiteral("audio")) {
+        mainController->setAudioBitrate(args.value(1).toInt());
     } else if (cmd == QStringLiteral("leave")) {
         mainController->stopNinjamController();
         exitFromRoom(true);
@@ -344,7 +345,7 @@ void MainWindow::changeCameraStatus(bool activated)
 {
     if (TestAvMarks::enabled()) { // synthetic frames: no camera device involved
         if (activated) {
-            mainController->setVideoProperties(MainController::MAX_VIDEO_SIZE);
+            mainController->setVideoProperties(QSize());
             addVideoChannel();
         } else if (localGroupChannels.size() > 1 && localGroupChannels.at(1)->isVideoChannel()) {
             removeChannelsGroup(localGroupChannels.at(1)->getChannelIndex());
@@ -438,6 +439,13 @@ void MainWindow::addVideoChannel()
     }
 }
 
+void MainWindow::selectVideoPreset(int preset)
+{
+    mainController->setVideoPreset(preset);
+    if (camera)
+        initializeCamera(preferredCameraName); // a camera mode that covers the new size
+}
+
 void MainWindow::selectNewCamera(int cameraIndex)
 {
     QString cameraDeviceName = cameraCombo->itemData(cameraIndex).toString();
@@ -494,11 +502,13 @@ QImage MainWindow::pickCameraFrame() const
         auto frame = videoFrameGrabber->grab();
         cameraView->setCurrentFrame(frame);
 
-        // scale the grabed frame if is bigger than MAX_VIDEO_SIZE. This is necessary because some cameras
-        // have only big resolutions, and we have problems sensing big resolution videos to ninjam servers.
-
-        if (frame.width() > MainController::MAX_VIDEO_SIZE.width())
-            return frame.scaled(mainController->getVideoResolution(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        // Fitted to the preset without deforming it: the camera's proportions rarely match.
+        const auto target = mainController->getVideoResolution();
+        if (!frame.isNull() && frame.size() != target) {
+            const auto scaled = frame.scaled(target, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+            return scaled.copy((scaled.width() - target.width()) / 2, (scaled.height() - target.height()) / 2,
+                               target.width(), target.height());
+        }
 
         return frame;
     }
@@ -2552,7 +2562,9 @@ void MainWindow::setupPreferencesDialogSignals(PreferencesDialog *dialog)
 
     connect(dialog, &PreferencesDialog::customMetronomeSelected, this, &MainWindow::setCustomMetronome);
 
-    connect(dialog, &PreferencesDialog::encodingQualityChanged, mainController, &MainController::setEncodingQuality);
+    connect(dialog, &PreferencesDialog::audioBitrateChanged, mainController, &MainController::setAudioBitrate);
+    connect(dialog, &PreferencesDialog::videoPresetChanged, this, &MainWindow::selectVideoPreset);
+    connect(dialog, &PreferencesDialog::receiveVideoChanged, mainController, &MainController::setReceiveVideo);
 
     connect(dialog, &PreferencesDialog::looperAudioEncodingFlagChanged, mainController, &MainController::storeLooperAudioEncodingFlag);
 

@@ -134,8 +134,11 @@ void FFMpegMuxer::encodeImage(const QImage &image, bool async)
                 startNewIntervalRequested = false;
         }
 
-        if (encodeVideo && !image.isNull())
-            encodeVideo = !doEncodeVideoFrame(image);
+        if (encodeVideo && !image.isNull()) {
+            // the frame was picked before a size change that has already reached the encoder
+            const auto sized = image.size() == videoResolution ? image : image.scaled(videoResolution);
+            encodeVideo = !doEncodeVideoFrame(sized);
+        }
         return 0;
     };
 
@@ -166,6 +169,11 @@ void FFMpegMuxer::startNewInterval()
 void FFMpegMuxer::setContinuousMode(bool continuous)
 {
     continuousMode = continuous;
+}
+
+void FFMpegMuxer::restart()
+{
+    startNewIntervalRequested = true;
 }
 
 void FFMpegMuxer::requestKeyFrame()

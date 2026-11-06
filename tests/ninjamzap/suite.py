@@ -215,7 +215,7 @@ class Jamtaba:
         os.makedirs(data)
         cfg = dict(masterGain=1, userName=name, translation="en", theme="Navy_nm",
                    audio=dict(sampleRate=48000, bufferSize=256, firstIn=0, lastIn=1, firstOut=0, lastOut=1,
-                              audioInputDevice=AUDIO_DEVICE, audioOutputDevice=AUDIO_DEVICE, encodingQuality=1))
+                              audioInputDevice=AUDIO_DEVICE, audioOutputDevice=AUDIO_DEVICE))
         for f in ("Jamtaba64.json", "Jamtaba.json"):
             with open(os.path.join(data, f), "w") as out:
                 json.dump(cfg, out)
@@ -230,7 +230,7 @@ class Jamtaba:
         self.name = name
         time.sleep(6)
         if self.proc.poll() is not None:
-            raise Failed(f"Jamtaba exited at startup ({self.proc.returncode})")
+            check(False, f"Jamtaba exited at startup (code {self.proc.returncode}, log tail: {self.log()[-120:]!r})")
 
     def cmd(self, line):
         with open(self.control, "a") as f:
@@ -485,10 +485,11 @@ def s_legacy_server(ctx):
 
 def s_receives_ninjamzap_video(ctx):
     join(ctx, camera=False)
-    peer = subprocess.Popen([os.path.join(PEERS, "nzpeer"), "127.0.0.1", str(ctx.server.port), "nzvideo", ctx.frames, ctx.sps,
-                             "15", "1", "70"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    # HD: frames of every size, including lengths that look like the start of an SPS/PPS block.
+    peer = subprocess.Popen([os.path.join(PEERS, "nzpeer"), "127.0.0.1", str(ctx.server.port), "nzvideo", ctx.hd_frames, ctx.hd_sps,
+                             "24", "1", "70"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     ctx.cleanup.append(peer.terminate)
-    check(ctx.sniff.wait_intervals("nzvideo", "H264", 7), "a NinjamZap peer sends video")
+    check(ctx.sniff.wait_intervals("nzvideo", "H264", 7), "a NinjamZap peer sends HD video")
     time.sleep(1)
     log = ctx.jt.log()
     plays = re.findall(r"JT_TEST video play match (\S+) frames (\d+)", log.replace('"', ""))
@@ -497,10 +498,30 @@ def s_receives_ninjamzap_video(ctx):
     check({m for m, _ in plays} <= {"PREV", "DS"}, "through the audio's GUID")
     check("JT_TEST video drop" not in log, "without drops")
     check(not ctx.jt.errors(), f"no decoder errors ({ctx.jt.errors()[:1]})")
-    check("Error decoding video" not in log and "Could not open the H.264" not in log, "H.264 decodes")
+    bad = log.count("Error decoding video")
+    check(bad == 0 and "Could not open the H.264" not in log, f"H.264 decodes ({bad} errors)")
     check(ctx.jt.alive(), "still running")
     time.sleep(INTERVAL)
     check(("nzvideo", 1) in ctx.sniff.channels and ctx.jt.alive(), "and keeps going")
+
+
+def s_frame_lengths_like_sps(ctx):
+    join(ctx, camera=False)
+    frames, sps = sps_lookalike_fixture()
+    peer = subprocess.Popen([os.path.join(PEERS, "nzpeer"), "127.0.0.1", str(ctx.server.port), "nzvideo", frames, sps,
+                             "10", "1", "50"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    ctx.cleanup.append(peer.terminate)
+    check(ctx.sniff.wait_intervals("nzvideo", "H264", 5), "a peer sends frames with those lengths")
+    time.sleep(1)
+    log = ctx.jt.log()
+    rows = [tuple(int(x) for x in m) for m in re.findall(r"JT_TEST video play match \S+ frames (\d+) previous (\d+) requested (\d+) decoded (\d+)", log.replace('"', ""))]
+    bad = log.count("Error decoding video")
+    check(len(rows) >= 2, f"Jamtaba plays them ({len(rows)})")
+    check(bad == 0, f"H.264 decodes ({bad} errors)")
+    full = [r for r in rows if r[1] > 0]
+    check(full and all(r[3] >= r[1] * 0.8 for r in full), f"and the frames really come out ({[(r[3], r[1]) for r in full]})")
+    images = [int(x) for x in re.findall(r"JT_TEST shown (\d+)", log)]
+    check(images and max(images) > 0, f"as images on the screen ({images[-3:]})")
 
 
 def jamtaba_to_jamtaba(ctx, seconds):
@@ -668,6 +689,207 @@ def s_voice_chat(ctx):
     check(not ctx.jt.errors(), "no encoder errors")
 
 
+PRESETS = [("SD", 320, 240, 10, 50), ("VGA", 640, 480, 15, 200), ("HD", 1280, 720, 24, 1200)]
+
+
+def cpu_percent(pid):
+    out = subprocess.run(["ps", "-o", "pcpu=", "-p", str(pid)], capture_output=True, text=True).stdout.strip()
+    return float(out.replace(",", ".")) if out else 0.0
+
+
+def interval_stream(ctx, video, name):
+    """Writes a video interval's frames as Annex-B; returns (path, frame chunks, bytes)."""
+    payload = guided(ctx.sniff)[video["guid"]]
+    parts, _ = chunks(payload)
+    sc = b"\0\0\0\1"
+    out = b""
+    sl = struct.unpack(">H", parts[1][:2])[0]
+    pl = struct.unpack(">H", parts[1][2 + sl:4 + sl])[0]
+    out += sc + parts[1][2:2 + sl] + sc + parts[1][4 + sl:4 + sl + pl]
+    for fr in parts[2:]:
+        for nal in avcc_nals(fr):
+            out += sc + nal
+    path = os.path.join(ctx.dir, name)
+    with open(path, "wb") as f:
+        f.write(out)
+    return path, parts[2:], len(payload)
+
+
+def stream_size(path):
+    r = subprocess.run(["ffprobe", "-v", "error", "-f", "h264", "-show_entries", "stream=width,height", "-of", "csv=p=0", path],
+                       capture_output=True, text=True).stdout.strip().splitlines()[0]
+    return tuple(int(x) for x in r.split(",")[:2])
+
+
+def s_video_presets(ctx):
+    for index, (name, w, h, fps, kbps) in enumerate(PRESETS):
+        print(f"    -- {name}")
+        ctx.server = Server(ctx.dir)
+        ctx.sniff = Sniffer(ctx.server.port)
+        ctx.jt = Jamtaba(os.path.join(ctx.dir, name))
+        try:
+            ctx.jt.cmd(f"video {index}")
+            ctx.jt.connect(ctx.server.port)
+            ctx.jt.cmd("camera on")
+            check(ctx.sniff.wait_intervals(USER, "H264", 4), f"{name}: video running")
+            time.sleep(1)
+            done = [v for v in ctx.sniff.of(USER, "H264") if v["guid"] in ctx.sniff.ended]
+            path, frames, size = interval_stream(ctx, done[-1], f"{name}.h264")
+            check(stream_size(path) == (w, h), f"{name}: {w}x{h} ({stream_size(path)})")
+            check(abs(len(frames) - fps * INTERVAL) <= fps * INTERVAL * 0.25, f"{name}: about {fps} fps ({len(frames) / INTERVAL:.1f})")
+            real = size * 8 / INTERVAL / 1000
+            check(real <= kbps * 1.5, f"{name}: within its {kbps} kbps ({real:.0f})")
+            cpu = cpu_percent(ctx.jt.proc.pid)
+            print(f"    {name}: {real:.0f} kbps, CPU {cpu:.0f}%, {ctx.jt.rss_mb():.0f} MB")
+            ctx.metrics[f"{name}_cpu"] = round(cpu)
+            check(not ctx.jt.errors(), f"{name}: no encoder errors")
+        finally:
+            ctx.sniff.stop()
+            ctx.jt.stop()
+            ctx.server.stop()
+            ctx.sniff = ctx.jt = ctx.server = None
+
+
+def s_video_preset_change(ctx):
+    join(ctx, camera=False)
+    ctx.jt.cmd("video 0")
+    ctx.jt.cmd("camera on")
+    check(ctx.sniff.wait_intervals(USER, "H264", 2), "video running in SD")
+    ctx.jt.cmd("video 2")
+    n = len(ctx.sniff.of(USER, "H264"))
+    check(ctx.sniff.wait_intervals(USER, "H264", n + 3), "video keeps going after changing to HD")
+    time.sleep(1)
+    done = [v for v in ctx.sniff.of(USER, "H264") if v["guid"] in ctx.sniff.ended]
+    path, frames, _ = interval_stream(ctx, done[-1], "after.h264")
+    check(stream_size(path) == (1280, 720), f"now in HD ({stream_size(path)})")
+    check(avcc_nals(frames[0])[0][0] & 0x1f == 5, "starting with an IDR")
+    sizes = [stream_size(interval_stream(ctx, v, f"i{i}.h264")[0]) for i, v in enumerate(done)]
+    print(f"    sizes per interval: {sizes}")
+    check(all(a == b or b == (1280, 720) for a, b in zip(sizes, sizes[1:])), "the size changes at an interval boundary")
+    log = Sync(ctx.dir, ctx.server.port, 30).wait(50)
+    check(re.search(r"video PLAY: key=jamtaba:1", log) is not None, "the core plays it")
+    check(not ctx.jt.errors(), "no encoder errors")
+
+
+def s_legacy_server_stays_sd(ctx):
+    join(ctx, camera=False, video=False)
+    ctx.jt.cmd("video 2")
+    ctx.jt.cmd("camera on")
+    check(ctx.sniff.wait_intervals(USER, "JTBv", 3), "falls back to JTBv")
+    time.sleep(1)
+    done = [b for b in ctx.sniff.of(USER, "JTBv") if b["guid"] in ctx.sniff.ended]
+    path = os.path.join(ctx.dir, "jtbv.h264")
+    with open(path, "wb") as f:
+        f.write(guided(ctx.sniff)[done[-1]["guid"]])
+    check(stream_size(path) == (320, 240), f"stays in SD even with HD chosen ({stream_size(path)})")
+
+
+def vorbis_nominal(payload):
+    i = payload.find(b"\x01vorbis")
+    return struct.unpack("<i", payload[i + 7 + 4 + 1 + 4 + 4:i + 7 + 4 + 1 + 4 + 8])[0] if i >= 0 else None
+
+
+def s_audio_presets(ctx):
+    join(ctx, camera=False)
+    check(ctx.sniff.wait_intervals(USER, "OGGv", 2), "audio running")
+    time.sleep(1)
+    first = guided(ctx.sniff)[ctx.sniff.of(USER, "OGGv", 0)[-1]["guid"]]
+    check(vorbis_nominal(first) == 128000, f"Standard by default ({vorbis_nominal(first)})")
+    for kbps in (64, 192, 256):
+        ctx.jt.cmd(f"audio {kbps}")
+        n = len(ctx.sniff.of(USER, "OGGv", 0))
+        check(ctx.sniff.wait_intervals(USER, "OGGv", n + 2, INTERVAL * 4), f"audio keeps going at {kbps} kbps")
+        time.sleep(0.5)
+        latest = guided(ctx.sniff)[ctx.sniff.of(USER, "OGGv", 0)[-1]["guid"]]
+        check(vorbis_nominal(latest) == kbps * 1000, f"{kbps} kbps in the Vorbis header ({vorbis_nominal(latest)})")
+
+
+def s_hd_jamtaba_to_jamtaba(ctx):
+    ctx.server = Server(ctx.dir)
+    ctx.sniff = Sniffer(ctx.server.port)
+    ctx.jt = Jamtaba(ctx.dir, name="receiver", marks=False)
+    sender = Jamtaba(ctx.dir, name=USER)
+    ctx.cleanup.append(sender.stop)
+    ctx.jt.connect(ctx.server.port)
+    sender.connect(ctx.server.port)
+    sender.cmd("video 2")
+    sender.cmd("camera on")
+    check(ctx.sniff.wait_intervals(USER, "H264", 2), "the sender transmits HD")
+    time.sleep(50)
+    send_cpu, recv_cpu = cpu_percent(sender.proc.pid), cpu_percent(ctx.jt.proc.pid)
+    log = ctx.jt.log()
+    plays = re.findall(r"JT_TEST video play match (\S+)", log.replace('"', ""))
+    check(len(plays) >= 3, f"the receiver plays it ({len(plays)})")
+    check(not ctx.jt.errors() and not sender.errors(), "no errors on either side")
+    print(f"    CPU sender {send_cpu:.0f}%, receiver {recv_cpu:.0f}%, receiver {ctx.jt.rss_mb():.0f} MB")
+    ctx.metrics["sender_cpu"], ctx.metrics["receiver_cpu"] = round(send_cpu), round(recv_cpu)
+
+
+def s_receive_video_off(ctx):
+    join(ctx, camera=False)
+    peer = subprocess.Popen([os.path.join(PEERS, "nzpeer"), "127.0.0.1", str(ctx.server.port), "nzvideo", ctx.frames, ctx.sps,
+                             "15", "1", "60"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    ctx.cleanup.append(peer.terminate)
+    check(ctx.sniff.wait_intervals("nzvideo", "H264", 2), "a peer sends video")
+    ctx.jt.cmd("receivevideo off")
+    time.sleep(INTERVAL + 2)  # the server finishes relaying the interval in progress
+    start = ctx.jt.bytes_in()
+    time.sleep(INTERVAL * 2)
+    off = ctx.jt.bytes_in() - start
+    check(off < 300 * 1024, f"with Receive video off it doesn't download it ({off / 1024:.0f} KB in 2 intervals)")
+    ctx.jt.cmd("receivevideo on")
+    time.sleep(INTERVAL + 2)
+    start = ctx.jt.bytes_in()
+    time.sleep(INTERVAL * 2)
+    on = ctx.jt.bytes_in() - start
+    check(on > 800 * 1024, f"on again, it does ({on / 1024:.0f} KB in 2 intervals)")
+
+
+def stress(ctx, remote_users):
+    join(ctx, camera=False)
+    ctx.jt.cmd("video 2")
+    ctx.jt.cmd("camera on")
+    peers = []
+    for i in range(remote_users):
+        peers.append(subprocess.Popen([os.path.join(PEERS, "nzpeer"), "127.0.0.1", str(ctx.server.port), f"hd{i}", ctx.hd_frames,
+                                       ctx.hd_sps, "24", "1", "150"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT))
+        ctx.cleanup.append(peers[-1].terminate)
+    deadline = time.time() + 30
+    while time.time() < deadline and len({b["user"] for b in ctx.sniff.begins if b["fourcc"] == "H264" and b["user"] != USER}) < remote_users:
+        time.sleep(0.5)
+    active = {b["user"] for b in ctx.sniff.begins if b["fourcc"] == "H264" and b["user"] != USER}
+    check(len(active) == remote_users, f"{remote_users} remote users send HD ({len(active)})")
+    samples, rss = [], []
+    for _ in range(50):
+        time.sleep(2)
+        samples.append(cpu_percent(ctx.jt.proc.pid))
+        rss.append(ctx.jt.rss_mb())
+    check(ctx.jt.alive(), "Jamtaba survives")
+    log = ctx.jt.log().replace('"', "")
+    rows = [tuple(int(x) for x in m) for m in re.findall(r"JT_TEST video play match \S+ frames (\d+) previous (\d+) requested (\d+) decoded (\d+) tickgap (\d+)", log)]
+    rows = [r for r in rows if r[1] > 0][remote_users * 2:]
+    check(len(rows) >= remote_users * 3, f"it keeps playing every user ({len(rows)} intervals)")
+    shown = sum(r[3] for r in rows) / max(1, sum(r[1] for r in rows))
+    worst_gap = max(r[4] for r in rows)
+    median_gap = statistics.median(r[4] for r in rows)
+    audio = [b["t"] for b in ctx.sniff.of(USER, "OGGv", 0)]
+    gaps = [y - x for x, y in zip(audio, audio[1:])]
+    lost = max(0.0, sum(gaps) - INTERVAL * len(gaps))
+    cpu = statistics.mean(samples[5:])
+    print(f"    CPU avg {cpu:.0f}% max {max(samples):.0f}%, RSS {rss[5]:.0f} -> {rss[-1]:.0f} MB (max {max(rss):.0f})")
+    print(f"    frames decoded {shown * 100:.0f}%, UI tick gap median {median_gap:.0f} ms, worst {worst_gap} ms")
+    print(f"    audio clock lost {lost:.2f} s in {len(gaps)} intervals; off-nominal {[round(g - INTERVAL, 2) for g in gaps if abs(g - INTERVAL) > 0.15]}")
+    ctx.metrics.update(cpu=round(cpu), rss=round(max(rss)), decoded_pct=round(shown * 100), tickgap_ms=worst_gap, audio_lost_s=round(lost, 2))
+    check(not ctx.jt.errors(), f"no errors ({ctx.jt.errors()[:1]})")
+    check("Error decoding video" not in log, f"no decoding errors ({log.count('Error decoding video')})")
+    check(shown >= 0.9, "decodes at least 90% of the frames")
+    check(lost <= 0.5, "the audio clock doesn't lose time")
+
+
+def s_stress_six_hd(ctx):
+    stress(ctx, 6)
+
+
 SCENARIOS = [
     ("wire format", s_wire_format),
     ("camera before join", s_camera_before_join),
@@ -676,6 +898,7 @@ SCENARIOS = [
     ("av sync", s_av_sync),
     ("legacy server", s_legacy_server),
     ("receives ninjamzap video", s_receives_ninjamzap_video),
+    ("frame lengths like sps", s_frame_lengths_like_sps),
     ("jamtaba to jamtaba sync", s_jamtaba_to_jamtaba_sync),
     ("legacy jtbv receive", s_legacy_jtbv_receive),
     ("camera toggle", s_camera_toggle),
@@ -684,6 +907,13 @@ SCENARIOS = [
     ("receiver stall", s_receiver_stall),
     ("transmit off", s_transmit_off),
     ("voice chat", s_voice_chat),
+    ("video presets", s_video_presets),
+    ("video preset change", s_video_preset_change),
+    ("legacy server stays sd", s_legacy_server_stays_sd),
+    ("audio presets", s_audio_presets),
+    ("hd jamtaba to jamtaba", s_hd_jamtaba_to_jamtaba),
+    ("receive video off", s_receive_video_off),
+    ("stress six hd", s_stress_six_hd),
 ]
 
 
@@ -719,6 +949,62 @@ def fixtures():
     return frames, spsf, jtbv
 
 
+def sps_lookalike_fixture():
+    """Valid frames whose first NAL length (00 00 07 80) starts like a [2B SPS length][SPS] block."""
+    fx = os.path.join(HERE, ".build", "fixtures")
+    video = os.path.join(fx, "small.h264")
+    if not os.path.exists(video):
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=320x240:r=10", "-t", "8", "-c:v", "libx264",
+                        "-preset", "veryfast", "-profile:v", "baseline", "-bf", "0", "-g", "80", "-b:v", "80k",
+                        "-pix_fmt", "yuv420p", "-f", "h264", video], check=True)
+    data = open(video, "rb").read()
+    starts = [m.start() for m in re.finditer(b"\x00\x00\x01", data)]
+    nals = [data[a + 3:(starts[i + 1] if i + 1 < len(starts) else len(data))].rstrip(b"\x00") for i, a in enumerate(starts)]
+    sps = next(n for n in nals if n[0] & 31 == 7)
+    pps = next(n for n in nals if n[0] & 31 == 8)
+    inner = struct.pack(">H", len(sps)) + sps + struct.pack(">H", len(pps)) + pps
+    spsf, frames = os.path.join(fx, "small-sps.bin"), os.path.join(fx, "lookalike-frames.bin")
+    with open(spsf, "wb") as f:
+        f.write(struct.pack(">I", len(inner)) + inner)
+    count = 0
+    target = 0x0780
+    with open(frames, "wb") as f:
+        for n in nals:
+            if n[0] & 31 not in (1, 5):
+                continue
+            if len(n) < target:  # one NAL, as an iPhone sends it; decoders ignore trailing zero words
+                n = n + (b"\x00\x00\x03" * target)[:target - len(n)]
+                count += 1
+            frame = struct.pack(">I", len(n)) + n
+            f.write(struct.pack(">I", len(frame)) + frame)
+    assert count > 40, count
+    return frames, spsf
+
+
+def hd_fixture():
+    """A camera-like HD stream at NinjamZap's HD preset: motion and noise, no B-frames, 24 fps."""
+    fx = os.path.join(HERE, ".build", "fixtures")
+    video = os.path.join(fx, "hd.h264")
+    if not os.path.exists(video):
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=1280x720:r=24", "-t", "8", "-vf", "noise=alls=12:allf=t",
+                        "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "baseline", "-bf", "0", "-g", "192", "-b:v", "1200k",
+                        "-maxrate", "1200k", "-bufsize", "1200k", "-pix_fmt", "yuv420p", "-f", "h264", video], check=True)
+    data = open(video, "rb").read()
+    starts = [m.start() for m in re.finditer(b"\x00\x00\x01", data)]
+    nals = [data[a + 3:(starts[i + 1] if i + 1 < len(starts) else len(data))].rstrip(b"\x00") for i, a in enumerate(starts)]
+    sps = next(n for n in nals if n[0] & 31 == 7)
+    pps = next(n for n in nals if n[0] & 31 == 8)
+    inner = struct.pack(">H", len(sps)) + sps + struct.pack(">H", len(pps)) + pps
+    spsf, frames = os.path.join(fx, "hd-sps.bin"), os.path.join(fx, "hd-frames.bin")
+    with open(spsf, "wb") as f:
+        f.write(struct.pack(">I", len(inner)) + inner)
+    with open(frames, "wb") as f:
+        for n in nals:
+            if n[0] & 31 in (1, 5):
+                f.write(struct.pack(">I", len(n) + 4) + struct.pack(">I", len(n)) + n)
+    return frames, spsf
+
+
 def main():
     words = [a for a in sys.argv[1:] if not a.startswith("--")]
     if "--list" in sys.argv:
@@ -727,12 +1013,14 @@ def main():
         return 0
     chosen = [s for s in SCENARIOS if not words or any(w in s[0] for w in words)]
     frames, sps, jtbv = fixtures()
+    hd_frames, hd_sps = hd_fixture()
     results = []
     for name, fn in chosen:
         ctx = Ctx()
         ctx.dir = os.path.join(OUT, name.replace(" ", "-"))
         os.makedirs(ctx.dir)
         ctx.frames, ctx.sps, ctx.jtbv = frames, sps, jtbv
+        ctx.hd_frames, ctx.hd_sps = hd_frames, hd_sps
         ctx.server = ctx.sniff = ctx.jt = None
         ctx.cleanup, ctx.metrics = [], {}
         ctx.sync_limit_ms = int(os.environ.get("JT_SYNC_LIMIT_MS", "300"))

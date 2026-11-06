@@ -18,11 +18,21 @@ Encoder::Encoder(uint channels, uint sampleRate, float quality):
     init(channels, sampleRate, quality);
 }
 
-void Encoder::init(uint channels, uint sampleRate, float quality)
+Encoder::Encoder(uint channels, uint sampleRate, int bitrateKbps):
+    initialized(false)
+{
+    init(channels, sampleRate, vorbis::EncoderQualityNormal, bitrateKbps);
+}
+
+void Encoder::init(uint channels, uint sampleRate, float quality, int bitrateKbps)
 {
     vorbis_info_init(&info);
 
-    if (vorbis_encode_init_vbr(&info, static_cast<long>(channels), static_cast<long>(sampleRate), quality) != 0) {
+    const long ch = static_cast<long>(channels);
+    const long rate = static_cast<long>(sampleRate);
+    if (bitrateKbps > 0 && vorbis_encode_init(&info, ch, rate, -1, bitrateKbps * 1000, -1) == 0) {
+        // nominal bitrate accepted
+    } else if (vorbis_encode_init_vbr(&info, static_cast<long>(channels), static_cast<long>(sampleRate), quality) != 0) {
         qCritical() << "vorbis encoder initialization error!";
     }
     vorbis_comment_init(&comment);

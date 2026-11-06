@@ -56,6 +56,7 @@ namespace client
         void sendIntervalPart(const MessageGuid &GUID, const QByteArray &encodedAudioBuffer, bool isLastPart);
         void sendIntervalBegin(const MessageGuid &GUID, quint8 channelIndex, bool isAudioInterval);
         void sendVideoIntervalBegin(const MessageGuid &GUID, quint8 channelIndex);
+        void setReceiveVideo(bool receive);
 
         // server_caps bit 1: the server relays video channels (AllowVideoChannels)
         inline bool serverSupportsVideo() const { return serverCapabilities & 0x02; }
@@ -140,6 +141,7 @@ namespace client
         QMap<QString, quint8> videoChannels; // per user, the video-only channel subscribed to
         QMap<MessageGuid, QString> syncedVideoDownloads;
         void sendUserMask(const QString &userFullName, quint32 extraChannels = 0);
+        bool receiveVideo = true;
 
         QScopedPointer<ServerInfo> currentServer;
 

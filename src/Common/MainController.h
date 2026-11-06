@@ -11,6 +11,7 @@
 #include "audio/core/AudioMixer.h"
 #include "midi/MidiDriver.h"
 #include "video/FFMpegMuxer.h"
+#include "video/VideoPresets.h"
 #include "gui/chat/EmojiManager.h"
 
 class MainWindow;
@@ -84,6 +85,9 @@ public:
     long getDownloadTransferRate(const QString userFullName, quint8 channelIndex) const;
 
     void setVideoProperties(const QSize &resolution);
+
+    void setVideoPreset(int preset);
+    const VideoPreset &currentVideoPreset() const;
 
     QSize getVideoResolution() const;
 
@@ -324,6 +328,8 @@ signals:
 public slots:
     virtual void setSampleRate(int newSampleRate);
     void setEncodingQuality(float newEncodingQuality);
+    void setAudioBitrate(int kbps);
+    void setReceiveVideo(bool receive);
     void storeLooperBitDepth(quint8 bitDepth);
 
     void storeRemoteUserRememberSettings(bool boost, bool level, bool pan, bool mute, bool lowCut);
@@ -368,6 +374,8 @@ protected:
     // synchronized video (ninjamzap-core docs/VIDEO_SYNC.md), when the server relays video
     bool sendingSyncedVideo = false;
     bool waitingVideoKeyFrame = false;
+    bool videoPresetPending = false;
+    void applyVideoPreset();
     bool videoParameterSetsSent = false;
     quint32 videoIntervalCounter = 0;
     void beginSyncedVideoInterval(const ninjam::MessageGuid &audioGuid);

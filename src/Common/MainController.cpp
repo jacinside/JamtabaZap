@@ -113,12 +113,48 @@ long MainController::getTotalUploadTransferRate() const
 
 void MainController::setVideoProperties(const QSize &resolution)
 {
-    QSize bestResolution(resolution);
-    if (resolution.width() > MainController::MAX_VIDEO_SIZE.width())
-         bestResolution = MainController::MAX_VIDEO_SIZE;
+    Q_UNUSED(resolution) // camera images are fitted to the preset
+    applyVideoPreset();
+}
 
-    videoEncoder.setVideoResolution(bestResolution);
-    videoEncoder.setVideoFrameRate(CAMERA_FPS);
+const VideoPreset &MainController::currentVideoPreset() const
+{
+    // Old clients keep every decoded frame of an interval as an image: more than SD doesn't fit.
+    const bool oldFormat = isPlayingInNinjamRoom() && !sendingSyncedVideo;
+    return VideoPresets::get(oldFormat ? int(VideoPresets::SD) : settings.getVideoPreset());
+}
+
+void MainController::applyVideoPreset()
+{
+    const auto &preset = currentVideoPreset();
+    videoEncoder.setVideoResolution(preset.size);
+    videoEncoder.setVideoFrameRate(preset.fps);
+    videoEncoder.setVideoBitRate(preset.bitrate);
+}
+
+void MainController::setVideoPreset(int preset)
+{
+    settings.setVideoPreset(preset);
+    if (videoIntervalToUpload) {
+        videoPresetPending = true; // at the next interval, which starts with its own key frame
+    } else {
+        applyVideoPreset();
+        videoEncoder.restart();
+    }
+}
+
+void MainController::setReceiveVideo(bool receive)
+{
+    settings.setReceivingVideo(receive);
+    if (ninjamService)
+        ninjamService->setReceiveVideo(receive);
+}
+
+void MainController::setAudioBitrate(int kbps)
+{
+    settings.setAudioBitrate(kbps);
+    if (isPlayingInNinjamRoom())
+        ninjamController->recreateEncoders();
 }
 
 QSize MainController::getVideoResolution() const
@@ -232,13 +268,23 @@ void MainController::setupNinjamControllerSignals()
 void MainController::connectInNinjamServer(const ServerInfo &server)
 {
     sendingSyncedVideo = ninjamService && ninjamService->serverSupportsVideo();
+    if (ninjamService)
+        ninjamService->setReceiveVideo(settings.isReceivingVideo());
     videoEncoder.setContinuousMode(sendingSyncedVideo);
+    videoPresetPending = false;
     videoIntervalToUpload.reset();
     videoIntervalCounter = 0;
 
     // The channels were announced before knowing this: a camera already on makes a video channel.
     if (mainWindow && ninjamService)
         ninjamService->sendNewChannelsListToServer(mainWindow->getChannelsMetadata());
+
+    // what the server allows decides the size, once it's known
+    const auto &preset = VideoPresets::get(sendingSyncedVideo ? settings.getVideoPreset() : int(VideoPresets::SD));
+    videoEncoder.setVideoResolution(preset.size);
+    videoEncoder.setVideoFrameRate(preset.fps);
+    videoEncoder.setVideoBitRate(preset.bitrate);
+    videoEncoder.restart();
 
     qCDebug(jtCore) << "connected in ninjam server";
 
@@ -329,7 +375,7 @@ uint MainController::getFramesPerInterval() const
 {
     auto intervalTimeInSeconds = ninjamController->getSamplesPerInterval()/getSampleRate();
 
-    return intervalTimeInSeconds * CAMERA_FPS;
+    return intervalTimeInSeconds * currentVideoPreset().fps;
 }
 
 void MainController::updateBpi(int newBpi)
@@ -446,6 +492,11 @@ void MainController::beginSyncedVideoInterval(const ninjam::MessageGuid &audioGu
 
     // Packets already in the encoder belong to the previous interval's GOP: the interval
     // starts at the first key frame encoded from now on.
+    if (videoPresetPending) {
+        videoPresetPending = false;
+        applyVideoPreset();
+        videoEncoder.restart();
+    }
     waitingVideoKeyFrame = true;
     videoParameterSetsSent = false;
     videoEncoder.requestKeyFrame();
@@ -1298,7 +1349,7 @@ QSharedPointer<audio::LocalInputNode> MainController::getInputTrackInGroup(quint
 
 bool MainController::canGrabNewFrameFromCamera() const
 {
-    static const quint64 timeBetweenFrames = 1000/CAMERA_FPS;
+    const quint64 timeBetweenFrames = 1000 / currentVideoPreset().fps;
 
     const quint64 now = QDateTime::currentMSecsSinceEpoch();
 

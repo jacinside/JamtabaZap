@@ -59,6 +59,7 @@ public:
     QString audioInputDevice;
     QString audioOutputDevice;
     float encodingQuality;
+    int audioBitrate;      // kbps of the interval audio
 };
 
 // +++++++++++++++++++++++++++++++++++++
@@ -428,6 +429,8 @@ private:
     QString translation;                // the translation language (en, fr, jp, pt, etc.) being used in chat
     QString theme;                      // the style sheet used
     int ninjamIntervalProgressShape;    // Circle, Ellipe or Line
+    int videoPreset = 1;
+    bool receivingVideo = true;
     float masterFaderGain;              // last master fader gain
     quint8 tracksLayoutOrientation;     // horizontal or vertical
     bool usingNarrowedTracks;           // narrow or wide tracks?
@@ -449,6 +452,15 @@ public:
 
     float getEncodingQuality() const;
     void setEncodingQuality(float quality);
+
+    inline int getAudioBitrate() const { return audioSettings.audioBitrate; }
+    inline void setAudioBitrate(int kbps) { audioSettings.audioBitrate = kbps; }
+
+    inline int getVideoPreset() const { return videoPreset; }
+    inline void setVideoPreset(int preset) { videoPreset = preset; }
+
+    inline bool isReceivingVideo() const { return receivingVideo; }
+    inline void setReceivingVideo(bool receive) { receivingVideo = receive; }
 
     void setBuiltInMetronome(const QString &metronomeAlias);
     QString getBuiltInMetronome() const;

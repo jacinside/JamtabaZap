@@ -7,6 +7,7 @@
 #include <QDateTime>
 #include "persistence/Settings.h"
 #include "MetronomeUtils.h"
+#include "video/VideoPresets.h"
 #include "audio/vorbis/Vorbis.h"
 
 PreferencesDialog::PreferencesDialog(QWidget *parent) :
@@ -74,6 +75,7 @@ void PreferencesDialog::initialize(PreferencesTab initialTab, const persistence:
     Q_UNUSED(initialTab);
     this->settings = settings;
     this->jamRecorders = jamRecorders;
+    createVideoTab();
     this->jamRecorderCheckBoxes = QMap<QCheckBox *, QString>();
     this->jamDateFormatRadioButtons = QMap<const QRadioButton *, QString>();
 
@@ -164,8 +166,7 @@ void PreferencesDialog::emitEncodingQualityChanged()
 {
     QVariant currentData = ui->comboBoxEncoderQuality->currentData();
     if (!currentData.isNull()) {
-        float selectedQuality = currentData.toFloat();
-        emit encodingQualityChanged(selectedQuality);
+        emit audioBitrateChanged(currentData.toInt());
     }
 }
 
@@ -198,30 +199,44 @@ void PreferencesDialog::accept()
     QDialog::accept();
 }
 
+void PreferencesDialog::createVideoTab()
+{
+    auto tab = new QWidget(this);
+    auto layout = new QFormLayout(tab);
+
+    auto quality = new QComboBox(tab);
+    quality->setObjectName(QStringLiteral("comboBoxVideoQuality"));
+    for (int i = 0; i < VideoPresets::Count; ++i) {
+        const auto &preset = VideoPresets::get(i);
+        quality->addItem(QString("%1 (%2x%3, %4 fps, %5 kbps)").arg(QString::fromLatin1(preset.name))
+                         .arg(preset.size.width()).arg(preset.size.height()).arg(preset.fps).arg(preset.bitrate / 1000));
+    }
+    quality->setCurrentIndex(settings->getVideoPreset());
+    connect(quality, QOverload<int>::of(&QComboBox::activated), this, &PreferencesDialog::videoPresetChanged);
+    layout->addRow(tr("Video quality you send:"), quality);
+
+    auto note = new QLabel(tr("On servers without video support, video stays in SD."), tab);
+    note->setWordWrap(true);
+    layout->addRow(QString(), note);
+
+    auto receive = new QCheckBox(tr("Receive video from other musicians"), tab);
+    receive->setChecked(settings->isReceivingVideo());
+    connect(receive, &QCheckBox::toggled, this, &PreferencesDialog::receiveVideoChanged);
+    layout->addRow(QString(), receive);
+
+    ui->prefsTab->addTab(tab, tr("Video"));
+}
+
 void PreferencesDialog::populateEncoderQualityComboBox()
 {
     ui->comboBoxEncoderQuality->clear();
-    ui->comboBoxEncoderQuality->addItem(tr("Low (good for slow internet connections)"), vorbis::EncoderQualityLow);
-    ui->comboBoxEncoderQuality->addItem(tr("Normal (default)"), vorbis::EncoderQualityNormal);
-    ui->comboBoxEncoderQuality->addItem(tr("High (for good internet connections only)"), vorbis::EncoderQualityHigh);
+    ui->comboBoxEncoderQuality->addItem(tr("Economy (64 kbps)"), 64);
+    ui->comboBoxEncoderQuality->addItem(tr("Standard (128 kbps, default)"), 128);
+    ui->comboBoxEncoderQuality->addItem(tr("High (192 kbps)"), 192);
+    ui->comboBoxEncoderQuality->addItem(tr("Studio (256 kbps)"), 256);
 
-    bool usingCustomQuality = usingCustomEncodingQuality();
-    if (usingCustomQuality)
-        ui->comboBoxEncoderQuality->addItem(tr("Custom quality"));
-
-    //select the correct item in combobox
-    if (!usingCustomQuality) {
-        float quality = settings->getEncodingQuality();
-        if (qFuzzyCompare(quality, vorbis::EncoderQualityLow))
-            ui->comboBoxEncoderQuality->setCurrentIndex(0);
-        else if (qFuzzyCompare(quality, vorbis::EncoderQualityNormal))
-            ui->comboBoxEncoderQuality->setCurrentIndex(1);
-        else if (qFuzzyCompare(quality, vorbis::EncoderQualityHigh))
-                    ui->comboBoxEncoderQuality->setCurrentIndex(2);
-    }
-    else {
-        ui->comboBoxEncoderQuality->setCurrentIndex(ui->comboBoxEncoderQuality->count() - 1);
-    }
+    const int index = ui->comboBoxEncoderQuality->findData(settings->getAudioBitrate());
+    ui->comboBoxEncoderQuality->setCurrentIndex(index >= 0 ? index : 1);
 }
 
 bool PreferencesDialog::usingCustomEncodingQuality()

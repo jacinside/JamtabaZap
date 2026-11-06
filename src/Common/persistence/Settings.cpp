@@ -240,6 +240,7 @@ AudioSettings::AudioSettings() :
     sampleRate(44100),
     bufferSize(128),
     encodingQuality(vorbis::EncoderQualityNormal),
+    audioBitrate(128),
     firstIn(-1),
     firstOut(-1),
     lastIn(-1),
@@ -264,6 +265,11 @@ void AudioSettings::read(const QJsonObject &in)
     encodingQuality = getValueFromJson(in, "encodingQuality", vorbis::EncoderQualityNormal); // using normal quality as fallback value.
 
     // ensure vorbis quality is in accepted range
+    // Saved by a version with only the quality levels: the closest bitrate.
+    int bitrateFromQuality = encodingQuality < vorbis::EncoderQualityNormal ? 64
+                           : encodingQuality > vorbis::EncoderQualityNormal ? 192 : 128;
+    audioBitrate = getValueFromJson(in, "audioBitrate", bitrateFromQuality);
+
     if (encodingQuality < vorbis::EncoderQualityLow)
         encodingQuality = vorbis::EncoderQualityLow;
     else if(encodingQuality > vorbis::EncoderQualityHigh)
@@ -294,6 +300,7 @@ void AudioSettings::write(QJsonObject &out) const
     out["audioOutputDevice"] = audioOutputDevice;
 
     out["encodingQuality"] = encodingQuality;
+    out["audioBitrate"] = audioBitrate;
 }
 
 // +++++++++++++++++++++++++++++
@@ -1085,6 +1092,11 @@ bool Settings::readFile(const QList<SettingsObject *> &sections)
         QJsonDocument doc = QJsonDocument::fromJson(configFile.readAll());
         QJsonObject root = doc.object();
 
+        if (root.contains("videoPreset"))
+            this->videoPreset = root["videoPreset"].toInt(1);
+        if (root.contains("receivingVideo"))
+            this->receivingVideo = root["receivingVideo"].toBool(true);
+
         if (root.contains("masterGain")) // read last master gain
             this->masterFaderGain = root["masterGain"].toDouble();
         else
@@ -1185,6 +1197,8 @@ bool Settings::writeFile(const QList<SettingsObject *> &sections) // io ops ...
         root["tracksLayoutOrientation"] = tracksLayoutOrientation;
         root["usingNarrowTracks"] = usingNarrowedTracks;
         root["masterGain"] = masterFaderGain;
+        root["videoPreset"] = videoPreset;
+        root["receivingVideo"] = receivingVideo;
         root["intervalsBeforeInactivityWarning"] = static_cast<int>(intervalsBeforeInactivityWarning);
         root["chatFontSizeOffset"] = static_cast<int>(chatFontSizeOffset);
         root["publicChatActivated"] = publicChatIsActivated();

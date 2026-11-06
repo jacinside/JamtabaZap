@@ -978,8 +978,10 @@ void NinjamController::recreateEncoderForChannel(int channelIndex, bool voiceCha
     if (iterator == encoders.end() || (iterator.value()->getChannels() != maxChannelsForEncoding ||
                                        iterator.value()->getSampleRate() != mainController->getSampleRate())) {   // a new encoder is necessary?
         int sampleRate = mainController->getSampleRate();
-        float encodingQuality = voiceChannelActivated ? vorbis::EncoderQualityLow : mainController->getEncodingQuality();
-        encoders[channelIndex] = QSharedPointer<vorbis::Encoder>::create(maxChannelsForEncoding, sampleRate, encodingQuality);
+        if (voiceChannelActivated)
+            encoders[channelIndex] = QSharedPointer<vorbis::Encoder>::create(maxChannelsForEncoding, sampleRate, vorbis::EncoderQualityLow);
+        else
+            encoders[channelIndex] = QSharedPointer<vorbis::Encoder>::create(maxChannelsForEncoding, sampleRate, mainController->getSettings().getAudioBitrate());
     }
 }
 
