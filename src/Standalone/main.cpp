@@ -39,6 +39,18 @@ int main(int argc, char *args[])
     QApplication application(argc, args);
 #endif
 
+#ifdef Q_OS_MAC
+    // Launched from a terminal, Qt activates the application anyway: give the keyboard back.
+    if (qEnvironmentVariableIsSet("JT_TEST_CONTROL")) {
+        QObject::connect(&application, &QGuiApplication::applicationStateChanged, [](Qt::ApplicationState state) {
+            if (state != Qt::ApplicationActive)
+                return;
+            const auto app = reinterpret_cast<id (*)(id, SEL)>(objc_msgSend)(reinterpret_cast<id>(objc_getClass("NSApplication")), sel_registerName("sharedApplication"));
+            reinterpret_cast<void (*)(id, SEL)>(objc_msgSend)(app, sel_registerName("deactivate"));
+        });
+    }
+#endif
+
     application.setStyle("fusion"); // same visual in all platforms
 
     persistence::Settings settings;
