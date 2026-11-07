@@ -36,6 +36,47 @@ jobs:
           path: PROJECTS/Standalone/**/*.exe
           if-no-files-found: error
 
+  windows-vst-plugin:
+    runs-on: ubuntu-latest
+    container:
+      image: defter/jamtaba-win64:v5.15.7
+    steps:
+      - uses: actions/checkout@v4
+      - name: FFmpeg with x264
+        shell: bash
+        run: .github/scripts/ffmpeg-with-x264.sh x86_64-w64-mingw32.static-
+      - name: Build
+        shell: bash
+        run: |
+          cd PROJECTS/VstPlugin
+          qmake VstPlugin.pro CONFIG+=release
+          make -k -j$(nproc)
+          find . -name '*.dll'
+          test -f release/JamtabaZapVST.dll
+          cd ../..
+          x86_64-w64-mingw32.static-g++ -std=c++14 -w -Isrc/third_party/fst tests/ninjamzap/peers/vstsmoke.cpp -static -o vstsmoke.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JamtabaZapVST-windows-x64
+          path: |
+            PROJECTS/VstPlugin/release/JamtabaZapVST.dll
+            vstsmoke.exe
+          if-no-files-found: error
+
+  windows-vst-smoke:
+    needs: windows-vst-plugin
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: JamtabaZapVST-windows-x64
+      - name: Load it like a DAW does
+        shell: bash
+        run: |
+          find . -type f
+          ./vstsmoke.exe "$(find . -name JamtabaZapVST.dll)"
+
   linux-x64:
     runs-on: ubuntu-latest
     container:

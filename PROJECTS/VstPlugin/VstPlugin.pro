@@ -10,19 +10,17 @@ JAMTABA_VERSION = $$(JAMTABA_VERSION)
 
 DEFINES += APP_VERSION=\"\\\"$${JAMTABA_VERSION}\\\"\"
 
-TARGET = "JamtabaVST2"  #using this name (with a '2' suffix) to match the previons JTBA versions and avoid duplicated plugin in user machines
+TARGET = "JamtabaZapVST"  # its own name, so that it can sit next to JamTaba in a DAW
 TEMPLATE = lib
 CONFIG += shared
 
 INCLUDEPATH += $$SOURCE_PATH/Plugins
 INCLUDEPATH += $$SOURCE_PATH/Plugins/VST
+INCLUDEPATH += $$SOURCE_PATH/Plugins/VST/fst
+INCLUDEPATH += $$SOURCE_PATH/third_party/fst
 
 win32{
     DEFINES += _CRT_SECURE_NO_WARNINGS
-
-    INCLUDEPATH += "$$VST_SDK_PATH/VST2_SDK"
-    INCLUDEPATH += "$$VST_SDK_PATH/VST2_SDK/pluginterfaces/vst2.x/"
-    INCLUDEPATH += "$$VST_SDK_PATH/VST2_SDK/public.sdk/source/vst2.x"
 
     DEF_FILE = VstPlugin.def #exporting DLL functions - fixing #1131
 }
@@ -60,8 +58,9 @@ SOURCES += TopLevelTextEditorModifier.cpp
 win32:SOURCES += SonarTextEditorModifier.cpp
 SOURCES += PreferencesDialogPlugin.cpp
 SOURCES += KeyboardHook.cpp
-SOURCES += $$VST_SDK_PATH/VST2_SDK/public.sdk/source/vst2.x/audioeffectx.cpp
-SOURCES += $$VST_SDK_PATH/VST2_SDK/public.sdk/source/vst2.x/audioeffect.cpp
+HEADERS += fst/audioeffectx.h
+HEADERS += fst/aeffeditor.h
+SOURCES += fst/audioeffectx.cpp
 
 win32 {
     #message("Windows VST build")

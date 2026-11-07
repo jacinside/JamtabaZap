@@ -21,6 +21,7 @@ JamTabaVSTPlugin::JamTabaVSTPlugin(audioMasterCallback audioMaster) :
     qCDebug(jtVstPlugin) << "Plugin constructor...";
     setNumInputs(DEFAULT_INPUTS*2);
     setNumOutputs(DEFAULT_OUTPUTS*2);
+    setUniqueID(CCONST('J', 't', 'Z', 'p')); // not JamTaba's: both can be in the same DAW
 
     canProcessReplacing(true);
     programsAreChunks(false);
@@ -116,7 +117,7 @@ bool JamTabaVSTPlugin::getEffectName(char *name)
 {
     if (!name)
         return false;
-    vst_strncpy(name, "JamTaba 2", kVstMaxEffectNameLen);
+    vst_strncpy(name, "JamtabaZap", kVstMaxEffectNameLen);
     return true;
 }
 
@@ -125,7 +126,7 @@ bool JamTabaVSTPlugin::getProductString(char *text)
     if (!text)
         return false;
 
-    QString string("JamTaba v" + QApplication::applicationVersion());
+    QString string("JamtabaZap v" + QApplication::applicationVersion());
     vst_strncpy(text, string.toLatin1().data(), kVstMaxProductStrLen);
     return true;
 }
@@ -135,7 +136,7 @@ bool JamTabaVSTPlugin::getVendorString(char *text)
     if (!text)
         return false;
 
-    vst_strncpy(text, "www.jamtaba.com", kVstMaxVendorStrLen);
+    vst_strncpy(text, "JamtabaZap", kVstMaxVendorStrLen);
 
     return true;
 }

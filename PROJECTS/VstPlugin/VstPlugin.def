@@ -1,4 +1,4 @@
-LIBRARY JamTaba
+LIBRARY JamtabaZapVST
 EXPORTS
 VSTPluginMain 
 main=VSTPluginMain
