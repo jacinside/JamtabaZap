@@ -417,6 +417,7 @@ def s_wire_format(ctx):
 def s_camera_before_join(ctx):
     join(ctx, camera_first=True)
     check(ctx.sniff.wait_intervals(USER, "H264", 3), "video starts with the camera already on")
+    check(old_video_notices(ctx) == 0, "no notice in a room with NinjamZap video")
     time.sleep(1)
     check(ctx.sniff.channels[(USER, 1)]["flags"] == 0x10, "video channel 1 has flag 0x10")
     check(not ctx.sniff.of(USER, "OGGv", 1), "no audio on the video channel")
@@ -469,10 +470,21 @@ def s_av_sync(ctx):
     check(sd <= 250, "stable over the session")
 
 
+def old_video_notices(ctx):
+    return ctx.jt.log().count("JT_TEST old video notice")
+
+
 def s_legacy_server(ctx):
     join(ctx, video=False)
     check(ctx.sniff.caps & 2 == 0, "the server doesn't advertise video")
     check(ctx.sniff.wait_intervals(USER, "JTBv", 4), "falls back to JTBv")
+    check(old_video_notices(ctx) == 1, f"turning the camera on tells the old format is used ({old_video_notices(ctx)})")
+    ctx.jt.cmd("camera off")
+    time.sleep(1)
+    ctx.jt.cmd("camera on")
+    time.sleep(1)
+    check(old_video_notices(ctx) == 1, f"it only tells once per room ({old_video_notices(ctx)})")
+    check(os.path.getsize(ctx.jt.control + ".notice.png") > 1000, "the notice is drawn")
     check(not ctx.sniff.of(USER, "H264"), "no H264 on a server without video")
     check(ctx.sniff.channels[(USER, 1)]["flags"] == 0, "channel 1 carries no 0x10 flag there")
     time.sleep(1)
@@ -989,6 +1001,12 @@ def s_video_preset_change(ctx):
     check(not ctx.jt.errors(), "no encoder errors")
 
 
+def s_legacy_server_camera_first(ctx):
+    join(ctx, video=False, camera_first=True)
+    check(ctx.sniff.wait_intervals(USER, "JTBv", 2), "falls back to JTBv")
+    check(old_video_notices(ctx) == 1, f"entering with the camera on tells it too ({old_video_notices(ctx)})")
+
+
 def s_legacy_server_stays_sd(ctx):
     join(ctx, camera=False, video=False)
     ctx.jt.cmd("video 2")
@@ -1174,6 +1192,7 @@ SCENARIOS = [
     ("voice chat sync", s_voice_chat_sync),
     ("video presets", s_video_presets),
     ("video preset change", s_video_preset_change),
+    ("legacy server camera first", s_legacy_server_camera_first),
     ("legacy server stays sd", s_legacy_server_stays_sd),
     ("audio presets", s_audio_presets),
     ("automation stays out of the way", s_automation_stays_out_of_the_way),

@@ -1096,6 +1096,7 @@ bool Settings::readFile(const QList<SettingsObject *> &sections)
             this->videoPreset = root["videoPreset"].toInt(1);
         if (root.contains("receivingVideo"))
             this->receivingVideo = root["receivingVideo"].toBool(true);
+        this->oldVideoNoticeHidden = root["oldVideoNoticeHidden"].toBool(false);
 
         if (root.contains("masterGain")) // read last master gain
             this->masterFaderGain = root["masterGain"].toDouble();
@@ -1199,6 +1200,7 @@ bool Settings::writeFile(const QList<SettingsObject *> &sections) // io ops ...
         root["masterGain"] = masterFaderGain;
         root["videoPreset"] = videoPreset;
         root["receivingVideo"] = receivingVideo;
+        root["oldVideoNoticeHidden"] = oldVideoNoticeHidden;
         root["intervalsBeforeInactivityWarning"] = static_cast<int>(intervalsBeforeInactivityWarning);
         root["chatFontSizeOffset"] = static_cast<int>(chatFontSizeOffset);
         root["publicChatActivated"] = publicChatIsActivated();

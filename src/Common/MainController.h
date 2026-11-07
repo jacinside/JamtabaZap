@@ -330,6 +330,8 @@ public slots:
     void setEncodingQuality(float newEncodingQuality);
     void setAudioBitrate(int kbps);
     void setReceiveVideo(bool receive);
+    inline bool isOldVideoNoticeHidden() const { return settings.isOldVideoNoticeHidden(); }
+    inline void hideOldVideoNotice() { settings.setOldVideoNoticeHidden(true); }
     void storeLooperBitDepth(quint8 bitDepth);
 
     void storeRemoteUserRememberSettings(bool boost, bool level, bool pan, bool mute, bool lowCut);

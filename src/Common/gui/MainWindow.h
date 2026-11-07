@@ -338,6 +338,9 @@ private slots:
     bool chordsPanelIsVisible() const;
 
 private:
+    void showOldVideoNotice();
+    bool oldVideoNoticeShown = false;
+
 
     static const QString JAMTABA_CHAT_BOT_NAME;
 

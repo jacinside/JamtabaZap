@@ -431,6 +431,7 @@ private:
     int ninjamIntervalProgressShape;    // Circle, Ellipe or Line
     int videoPreset = 1;
     bool receivingVideo = true;
+    bool oldVideoNoticeHidden = false;
     float masterFaderGain;              // last master fader gain
     quint8 tracksLayoutOrientation;     // horizontal or vertical
     bool usingNarrowedTracks;           // narrow or wide tracks?
@@ -461,6 +462,8 @@ public:
 
     inline bool isReceivingVideo() const { return receivingVideo; }
     inline void setReceivingVideo(bool receive) { receivingVideo = receive; }
+    inline bool isOldVideoNoticeHidden() const { return oldVideoNoticeHidden; }
+    inline void setOldVideoNoticeHidden(bool hidden) { oldVideoNoticeHidden = hidden; }
 
     void setBuiltInMetronome(const QString &metronomeAlias);
     QString getBuiltInMetronome() const;

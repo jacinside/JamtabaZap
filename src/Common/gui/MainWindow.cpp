@@ -9,6 +9,7 @@
 #include "UserNameDialog.h"
 #include "JamRoomViewPanel.h"
 #include <QToolButton>
+#include <QCheckBox>
 #include "widgets/MapWidget.h"
 #include "widgets/ChatTabWidget.h"
 #include "PreferencesDialog.h"
@@ -379,8 +380,41 @@ void MainWindow::runTestCommand(const QStringList &args)
     }
 }
 
+void MainWindow::showOldVideoNotice()
+{
+    if (oldVideoNoticeShown || mainController->isSendingSyncedVideo() || mainController->isOldVideoNoticeHidden())
+        return;
+    oldVideoNoticeShown = true;
+
+    auto box = new QMessageBox(QMessageBox::Information, tr("Video in this room"),
+                               tr("This room doesn't support NinjamZap video, so your video goes out in SD, "
+                                  "in the Jamtaba format, whatever quality you chose. "
+                                  "NinjamZap users may not see you."),
+                               QMessageBox::Ok, this);
+    box->setAttribute(Qt::WA_DeleteOnClose);
+    auto dontShowAgain = new QCheckBox(tr("Don't show this again"), box);
+    box->setCheckBox(dontShowAgain);
+    connect(box, &QMessageBox::finished, this, [this, dontShowAgain]() {
+        if (dontShowAgain->isChecked())
+            mainController->hideOldVideoNotice();
+    });
+
+    const QString testControl = qEnvironmentVariable("JT_TEST_CONTROL");
+    if (testControl.isEmpty()) {
+        box->setModal(false); // the jam goes on: nothing has to wait for this
+        box->show();
+    } else { // nobody is there to close it
+        qInfo() << "JT_TEST old video notice";
+        box->grab().save(testControl + QStringLiteral(".notice.png"));
+        box->deleteLater();
+    }
+}
+
 void MainWindow::changeCameraStatus(bool activated)
 {
+    if (activated && mainController->isPlayingInNinjamRoom())
+        showOldVideoNotice();
+
     if (TestAvMarks::enabled()) { // synthetic frames: no camera device involved
         if (activated) {
             mainController->setVideoProperties(QSize());
@@ -1488,6 +1522,10 @@ void MainWindow::enterInRoom(const login::RoomInfo &roomInfo)
 {
     qCDebug(jtGUI) << "hidding busy dialog...";
     hideBusyDialog();
+
+    oldVideoNoticeShown = false;
+    if (cameraIsActivated())
+        showOldVideoNotice();
 
     setUserNameReadOnlyStatus(true); // lock the user name field, user name can't be changed when jamming
 
