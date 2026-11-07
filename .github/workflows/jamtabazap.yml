@@ -139,7 +139,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows-x64, linux-x64, macos-x86_64]
+    needs: [windows-x64, windows-vst-smoke, linux-x64, macos-x86_64]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -155,4 +155,5 @@ jobs:
           (cd artifacts/JamtabaZap-windows-x64 && zip -qj ../../out/JamtabaZap-windows-x64.zip $(find . -name JamtabaZap.exe) $(find . -name VstScanner.exe))
           (cd artifacts/JamtabaZap-linux-x64 && chmod +x $(find . -name JamtabaZap) $(find . -name VstScanner) && zip -qj ../../out/JamtabaZap-linux-x64.zip $(find . -name JamtabaZap) $(find . -name VstScanner))
           cp artifacts/JamtabaZap-macos-x86_64/JamtabaZap-macos-x86_64.zip out/
+          (cd artifacts/JamtabaZapVST-windows-x64 && zip -qj ../../out/JamtabaZap-VST-windows-x64.zip $(find . -name JamtabaZapVST.dll))
           gh release create "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --prerelease --title "JamtabaZap $GITHUB_REF_NAME" --notes "Beta. See the README for how to install it and its known limits."

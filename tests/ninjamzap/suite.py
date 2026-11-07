@@ -697,6 +697,58 @@ def s_update_notice(ctx):
         check(told == expected, f"with {APP_VERSION} running, {tag} {'is offered' if expected else 'is not offered'}")
 
 
+def s_slow_login(ctx):
+    """A server far away: its first message can arrive in two pieces, as it does through a cloud
+    proxy. The client has to wait for it and send nothing before logging in."""
+    ctx.server = Server(ctx.dir)
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", 0))
+    listener.listen(16)
+
+    def pipe(source, target, split_first=False):
+        try:
+            while True:
+                data = source.recv(65536)
+                if not data:
+                    break
+                if split_first:
+                    split_first = False
+                    target.sendall(data[:3])
+                    time.sleep(0.3)
+                    data = data[3:]
+                target.sendall(data)
+        except OSError:
+            pass
+        for s_ in (source, target):
+            try:
+                s_.close()
+            except OSError:
+                pass
+
+    def serve():
+        while True:
+            client, _ = listener.accept()
+            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            upstream = socket.create_connection(("127.0.0.1", ctx.server.port))
+            upstream.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            threading.Thread(target=pipe, args=(client, upstream), daemon=True).start()
+            threading.Thread(target=pipe, args=(upstream, client, True), daemon=True).start()
+
+    threading.Thread(target=serve, daemon=True).start()
+    ctx.jt = Jamtaba(ctx.dir, marks=False)
+    for attempt in range(1, 5):
+        start = len(ctx.jt.log())
+        ctx.jt.cmd(f"connect 127.0.0.1 {listener.getsockname()[1]} {ctx.jt.name}")
+        deadline = time.time() + 6
+        while time.time() < deadline and "connected in ninjam server" not in ctx.jt.log()[start:]:
+            time.sleep(0.1)
+        log = ctx.jt.log()[start:]
+        check("connected in ninjam server" in log, f"login {attempt} goes through ({'closed by the server' if 'closed the connection' in log else 'no answer'})")
+        ctx.jt.cmd("leave")
+        time.sleep(1.5)
+
+
 def s_vst_scanner(ctx):
     scanner = os.path.join(os.path.dirname(APP), "VstScanner")
     check(os.path.exists(scanner), "the scanner is next to the app")
@@ -1221,6 +1273,7 @@ SCENARIOS = [
     ("audio presets", s_audio_presets),
     ("automation stays out of the way", s_automation_stays_out_of_the_way),
     ("ninjamzap rooms stand out", s_ninjamzap_rooms_stand_out),
+    ("slow login", s_slow_login),
     ("update notice", s_update_notice),
     ("vst plugin", s_vst_plugin),
     ("vst scanner", s_vst_scanner),

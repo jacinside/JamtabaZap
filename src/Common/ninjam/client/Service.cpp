@@ -290,6 +290,11 @@ void Service::sendMessageToServer(const ClientMessage &message)
 
 bool Service::needSendKeepAlive() const
 {
+    // Before logging in, the server takes anything but the login as a bad one and hangs up. The
+    // first message can arrive in pieces, and each piece gets here.
+    if (!initialized)
+        return false;
+
     long ellapsedSeconds = (QDateTime::currentMSecsSinceEpoch() - lastSendTime)/1000;
     return ellapsedSeconds >= serverKeepAlivePeriod;
 }

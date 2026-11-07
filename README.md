@@ -16,10 +16,11 @@ A fork of [JamTaba](https://github.com/elieserdejesus/JamTaba), based on [defter
 - **Windows:** unzip and run `JamtabaZap.exe`. It needs an ASIO driver; [ASIO4ALL](https://www.asio4all.org/) works if your interface has none. The build isn't signed, so Windows SmartScreen warns about it: choose "More info", then "Run anyway".
 - **macOS:** Intel build, which also runs on Apple Silicon through Rosetta. It isn't signed: right-click the app and choose "Open".
 - **Linux:** run the `JamtabaZap` executable.
+- **VST plugin (Windows):** unzip `JamtabaZap-VST-windows-x64.zip` and copy `JamtabaZapVST.dll` to your DAW's VST folder.
 
 ## Known limits
 
-- VST2 plugins can be used inside JamtabaZap. Using JamtabaZap itself as a plugin in another program isn't included in this beta.
+- VST2 plugins can be used inside JamtabaZap. JamtabaZap itself is also available as a VST2 plugin for 64-bit Windows; there's no plugin version for macOS yet.
 - HD takes a lot of CPU on older computers. When the encoder can't keep up, frames are skipped: choose VGA or SD if your computer struggles.
 
 ## Credits and license
