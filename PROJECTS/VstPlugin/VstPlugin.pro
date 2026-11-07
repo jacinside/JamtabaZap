@@ -102,7 +102,7 @@ win32 {
     #CONFIG(debug, debug|release):   LIBS += -L$(QTDIR)\plugins\mediaservice\ -lqtfreetyped
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    LIBS += -lvorbisfile -lvorbis -logg -lx264 -lavcodec -lavutil -lavformat -lswscale -lswresample -lminiupnpc
+    LIBS += -lvorbisfile -lvorbis -logg -lavcodec -lavutil -lavformat -lswscale -lswresample -lminiupnpc -lx264
 
     LIBS += -lwinmm -lole32 -lws2_32 -ladvapi32 -luser32 #-lPsapi
 
