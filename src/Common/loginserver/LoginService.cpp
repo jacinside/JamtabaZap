@@ -77,6 +77,12 @@ int RoomInfo::getNonBotUsersCount() const
     return nonBots;
 }
 
+bool RoomInfo::isNinjamZap() const
+{
+    const QString host = name.toLower();
+    return host == QStringLiteral("ninjamzap.com") || host.endsWith(QStringLiteral(".ninjamzap.com"));
+}
+
 bool RoomInfo::isEmpty() const
 {
     return getNonBotUsersCount() == 0;
@@ -89,8 +95,11 @@ LoginService::LoginService(QObject *parent) :
     httpClient(this),
     refreshTimer(new QTimer(this))
 {
+    const QString testRoomsUrl = qEnvironmentVariable("JT_TEST_ROOMS_URL");
+    const QUrl roomsUrl(testRoomsUrl.isEmpty() ? LOGIN_SERVER_URL : testRoomsUrl);
+
     connect(refreshTimer, &QTimer::timeout, this, [=](){
-        httpClient.get(QNetworkRequest(QUrl(LOGIN_SERVER_URL)));
+        httpClient.get(QNetworkRequest(roomsUrl));
     });
 
     connect(&httpClient, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply){
@@ -100,7 +109,7 @@ LoginService::LoginService(QObject *parent) :
     refreshTimer->start(REFRESH_PERIOD);
 
     // the first public servers list query
-    httpClient.get(QNetworkRequest(QUrl(LOGIN_SERVER_URL)));
+    httpClient.get(QNetworkRequest(roomsUrl));
 
     // query the current version to jamtaba server using HTTP (is querying github using HTTPS)
     httpClient.get(QNetworkRequest(QUrl(VERSION_SERVER_URL)));

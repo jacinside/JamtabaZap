@@ -69,6 +69,7 @@ private:
 
     QLayout *waveDrawingButtonsLayout;
     QMap<WavePeakPanel::WaveDrawingMode, QPushButton*> waveDrawingButtons;
+    void createNinjamZapIcons();
     void createWaveDrawingButtonsLayout(QLayout *layout);
     void setWaveDrawingButtonsVisibility(bool showButtons);
 

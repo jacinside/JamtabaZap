@@ -12,6 +12,7 @@ checks what reaches the wire (Sniffer) and what ninjamzap-core's real receiver d
 """
 import array
 import hashlib
+import http.server
 import json
 import math
 import os
@@ -587,23 +588,77 @@ def s_vst_plugin(ctx):
 
 
 def front_app():
-    out = subprocess.run(["lsappinfo", "info", "-only", "name", subprocess.run(["lsappinfo", "front"], capture_output=True, text=True).stdout.strip()], capture_output=True, text=True).stdout
-    return out.strip()
+    """The frontmost process, as 'name pid': another JamtabaZap can legitimately be open."""
+    front = subprocess.run(["lsappinfo", "front"], capture_output=True, text=True).stdout.strip()
+    out = subprocess.run(["lsappinfo", "info", "-only", "name,pid", front], capture_output=True, text=True).stdout
+    return " ".join(out.split())
 
 
 def s_automation_stays_out_of_the_way(ctx):
-    before = front_app()
     ctx.server = Server(ctx.dir)
     ctx.sniff = Sniffer(ctx.server.port)
     ctx.jt = Jamtaba(ctx.dir, marks=False)
     ctx.jt.connect(ctx.server.port)
     check(ctx.sniff.wait_intervals(USER, "OGGv", 1), "automation still drives it")
-    print(f"    front app: {before} -> {front_app()}")
-    check("JamtabaZap" not in front_app(), "it doesn't take the front of the screen")
+    front = front_app()
+    check(f'"pid"={ctx.jt.proc.pid}' not in front, f"it doesn't take the front of the screen ({front})")
     log = ctx.jt.log()
     check("Settings addVstPlugin" not in log, "it doesn't scan this computer's plugins")
     hosts = set(re.findall(r'socket connected on\s+"([^"]+)"', log))
     check(hosts == {"localhost"}, f"it only connects to the local server ({hosts})")
+
+
+ROOM_THEMES = ["Navy_nm", "Black_nm", "Flat", "Game_nm", "Ice", "Rounded", "Volcano_nm"]
+
+
+def s_ninjamzap_rooms_stand_out(ctx):
+    def room(host, port, users):
+        return dict(name=f"{host}:{port}", bpi="16", bpm="120", user_max="8", stream="http://127.0.0.1:9/stream",
+                    users=[dict(name=f"player{i}", ip="10.0.0.x", lat="0", lon="0", co="", country="")
+                           for i in range(users)])
+
+    rooms = [room("ninbot.com", 2049, 2), room("ninbot.com", 2050, 1), room("video.ninjamzap.com", 2049, 1),
+             room("ninjamer.com", 2049, 0), room("evilninjamzap.com", 2049, 0),
+             room("ninjamzap.com.evil.net", 2049, 0), room("video.ninjamzap.com", 2050, 0)]
+    body = json.dumps(dict(servers=rooms)).encode()
+
+    class RoomList(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            time.sleep(3)  # as slow as the real one: the main window connects to the list while starting
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    web = http.server.ThreadingHTTPServer(("127.0.0.1", 0), RoomList)
+    threading.Thread(target=web.serve_forever, daemon=True).start()
+    ctx.jt = Jamtaba(ctx.dir, marks=False,
+                     extra_env=dict(JT_TEST_ROOMS_URL=f"http://127.0.0.1:{web.server_address[1]}/servers.php"))
+
+    ours = {"video.ninjamzap.com:2049", "video.ninjamzap.com:2050"}
+    for theme in ROOM_THEMES:
+        start = len(ctx.jt.log())
+        ctx.jt.cmd(f"theme {theme}")
+        time.sleep(1)
+        ctx.jt.cmd("rooms")
+        ctx.jt.cmd(f"grabrooms {os.path.join(ctx.dir, theme + '.png')}")
+        time.sleep(1.5)
+        seen = re.findall(r"JT_TEST room (\S+) icon (\w+) logo (\w+) left (#\w+) live (\S+)", ctx.jt.log()[start:])
+        check(len(seen) == len(rooms), f"{theme}: all rooms are listed ({len(seen)})")
+        order = [s[0] for s in seen]
+        for name, icon, logo, left, live in seen:
+            is_ours = name in ours
+            page = "https://www.ninjamzap.com/live/" + name.replace(":", "/") if is_ours else "-"
+            check(live == page, f"{theme}: {name} LIVE button {live}")
+            check((logo == "true") == is_ours, f"{theme}: {name} NinjamZap logo {logo}")
+            check((icon == "true") == is_ours, f"{theme}: {name} video icon {icon}")
+            check((left == "#7c3aed") == is_ours, f"{theme}: {name} border {left}")
+        check(order[0] == "ninbot.com:2049", f"{theme}: the fullest room stays first ({order[0]})")
+        check(order[1] == "video.ninjamzap.com:2049", f"{theme}: ours first among rooms with 1 player ({order[1]})")
+        check(order[3] == "video.ninjamzap.com:2050", f"{theme}: ours first among empty rooms ({order[3]})")
 
 
 def s_vst_scanner(ctx):
@@ -1122,6 +1177,7 @@ SCENARIOS = [
     ("legacy server stays sd", s_legacy_server_stays_sd),
     ("audio presets", s_audio_presets),
     ("automation stays out of the way", s_automation_stays_out_of_the_way),
+    ("ninjamzap rooms stand out", s_ninjamzap_rooms_stand_out),
     ("vst plugin", s_vst_plugin),
     ("vst scanner", s_vst_scanner),
     ("vst real plugin", s_vst_real_plugin),

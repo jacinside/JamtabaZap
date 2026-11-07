@@ -49,6 +49,40 @@ JamRoomViewPanel[empty="true"] #labelName
     font-weight: normal;
 }
 
+/* rooms hosted by NinjamZap, which carry video */
+JamRoomViewPanel[ninjamzap="true"],
+JamRoomViewPanel[ninjamzap="true"][empty="true"],
+JamRoomViewPanel[ninjamzap="true"][empty="false"]
+{
+    border-image: none;
+    border: 1px solid #7c3aed;
+    border-left: 3px solid #7c3aed;
+}
+
+JamRoomViewPanel QToolButton#buttonNinjamZapLogo
+{
+    border: none;
+    padding: 0px;
+    background: transparent;
+}
+
+JamRoomViewPanel QPushButton#buttonLive,
+JamRoomViewPanel QPushButton#buttonLive:disabled
+{
+    border: none;
+    border-image: none;
+    border-radius: 3px;
+    padding: 3px 8px;
+    font-weight: bold;
+    color: white;
+    background-color: #7c3aed;
+}
+
+JamRoomViewPanel QPushButton#buttonLive:hover
+{
+    background-color: #8b5cf6;
+}
+
 JamRoomViewPanel QPushButton#buttonWaveDrawingMode
 {
     max-height: 12px;

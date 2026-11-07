@@ -8,6 +8,7 @@
 #include "ninjam/client/Service.h"
 #include "UserNameDialog.h"
 #include "JamRoomViewPanel.h"
+#include <QToolButton>
 #include "widgets/MapWidget.h"
 #include "widgets/ChatTabWidget.h"
 #include "PreferencesDialog.h"
@@ -345,6 +346,31 @@ void MainWindow::runTestCommand(const QStringList &args)
         mainController->setReceiveVideo(on);
     } else if (cmd == QStringLiteral("audio")) {
         mainController->setAudioBitrate(args.value(1).toInt());
+    } else if (cmd == QStringLiteral("theme")) {
+        setTheme(args.value(1));
+    } else if (cmd == QStringLiteral("rooms")) {
+        const auto layout = ui.allRoomsContent->layout();
+        for (int i = 0; i < layout->count(); ++i) {
+            auto panel = qobject_cast<JamRoomViewPanel *>(layout->itemAt(i)->widget());
+            if (!panel)
+                continue;
+            const QImage image = panel->grab().toImage();
+            auto icon = panel->findChild<QLabel *>(QStringLiteral("labelVideoIcon"));
+            auto logo = panel->findChild<QToolButton *>(QStringLiteral("buttonNinjamZapLogo"));
+            auto live = panel->findChild<QPushButton *>(QStringLiteral("buttonLive"));
+            const QImage logoImage = logo ? logo->icon().pixmap(16, 16).toImage() : QImage();
+            const bool logoDrawn = logo && logo->isVisibleTo(panel)
+                    && logoImage.pixelColor(logoImage.width() / 2, logoImage.height() / 2).alpha() > 0;
+            qInfo().noquote() << "JT_TEST room" << panel->getRoomInfo().getUniqueName()
+                              << "icon" << (icon && icon->isVisibleTo(panel))
+                              << "logo" << logoDrawn
+                              << "left" << image.pixelColor(0, image.height() / 2).name()
+                              << "live" << (live && live->isVisibleTo(panel) ? live->property("url").toUrl().toString() : QStringLiteral("-"));
+        }
+    } else if (cmd == QStringLiteral("grabrooms")) {
+        setEnabled(true); // a disabled window is drawn without colour
+        grab().save(args.value(1));
+        setEnabled(false);
     } else if (cmd == QStringLiteral("leave")) {
         mainController->stopNinjamController();
         exitFromRoom(true);
@@ -1216,7 +1242,12 @@ bool MainWindow::jamRoomLessThan(const login::RoomInfo &r1, const login::RoomInf
     if( r1.isPrivateServer())
         return true;
 
-    return r1.getNonBotUsersCount() > r2.getNonBotUsersCount();
+    const int users1 = r1.getNonBotUsersCount();
+    const int users2 = r2.getNonBotUsersCount();
+    if (users1 != users2)
+        return users1 > users2;
+
+    return r1.isNinjamZap() && !r2.isNinjamZap();
 }
 
 void MainWindow::detachMainController()

@@ -54,6 +54,7 @@ public:
     bool isEmpty() const;
     bool isFull() const;
     bool isPrivateServer() const { return isPrivate; }
+    bool isNinjamZap() const; // hosted by NinjamZap, so it carries H.264 video
 
     int getPort() const;
 

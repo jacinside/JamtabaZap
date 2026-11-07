@@ -12,6 +12,11 @@
 #include "widgets/MapWidget.h"
 #include "widgets/MapMarker.h"
 #include <QStyle>
+#include <QLabel>
+#include <QToolButton>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QPainterPath>
 
 JamRoomViewPanel::JamRoomViewPanel(const login::RoomInfo &roomInfo, controller::MainController *mainController) :
     QFrame(nullptr),
@@ -28,6 +33,9 @@ JamRoomViewPanel::JamRoomViewPanel(const login::RoomInfo &roomInfo, controller::
     connect(mainController, &controller::MainController::ipResolved, this, &JamRoomViewPanel::updateUserLocation);
 
     createMapWidgets();
+
+    if (roomInfo.isNinjamZap())
+        createNinjamZapIcons();
 
     // add wave peak panel as a layer in top of map widget
     ui->content->layout()->removeWidget(ui->wavePeakPanel);
@@ -50,6 +58,73 @@ JamRoomViewPanel::JamRoomViewPanel(const login::RoomInfo &roomInfo, controller::
     setWaveDrawingMode(lastDrawingMode);
 
     initialize(roomInfo);
+}
+
+void JamRoomViewPanel::createNinjamZapIcons()
+{
+    const QSize iconSize(32, 32); // shown at 16 points, sharp on high density screens
+
+    QImage logo(iconSize, QImage::Format_ARGB32_Premultiplied);
+    logo.fill(Qt::transparent);
+    {
+        QPainter painter(&logo);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setRenderHint(QPainter::SmoothPixmapTransform);
+        QPainterPath roundedCorners; // the picture has square black corners
+        roundedCorners.addRoundedRect(logo.rect(), 7, 7);
+        painter.setClipPath(roundedCorners);
+        painter.drawImage(logo.rect(), QImage(QStringLiteral(":/images/ninjamzap.png")));
+    }
+    logo.setDevicePixelRatio(2);
+
+    QImage camera = QImage(QStringLiteral(":/images/webcam.png")).scaled(iconSize, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+                    .convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    {
+        QPainter painter(&camera);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(camera.rect(), QColor(0x7c, 0x3a, 0xed)); // the same colour as the border in PublicRooms.css
+    }
+    camera.setDevicePixelRatio(2);
+
+    auto logoButton = new QToolButton(this);
+    logoButton->setObjectName(QStringLiteral("buttonNinjamZapLogo"));
+    logoButton->setIcon(QPixmap::fromImage(logo));
+    logoButton->setIconSize(QSize(16, 16));
+    logoButton->setCursor(Qt::PointingHandCursor);
+    logoButton->setToolTip(tr("NinjamZap website"));
+    connect(logoButton, &QToolButton::clicked, this, []() {
+        QDesktopServices::openUrl(QUrl(QStringLiteral("https://www.ninjamzap.com/")));
+    });
+
+    auto cameraLabel = new QLabel(this);
+    cameraLabel->setObjectName(QStringLiteral("labelVideoIcon"));
+    cameraLabel->setPixmap(QPixmap::fromImage(camera));
+    cameraLabel->setToolTip(tr("NinjamZap room with video"));
+
+    const QUrl liveUrl(QStringLiteral("https://www.ninjamzap.com/live/%1/%2").arg(roomInfo.getName()).arg(roomInfo.getPort()));
+    auto liveButton = new QPushButton(tr("LIVE"), this);
+    liveButton->setObjectName(QStringLiteral("buttonLive"));
+    liveButton->setToolTip(tr("Watch this room in your browser"));
+    liveButton->setProperty("url", liveUrl);
+    connect(liveButton, &QPushButton::clicked, this, [liveUrl]() {
+        QDesktopServices::openUrl(liveUrl);
+    });
+
+    auto nameRow = new QHBoxLayout();
+    nameRow->setContentsMargins(0, 0, 0, 0);
+    nameRow->setSpacing(4);
+    ui->gridLayout->removeWidget(ui->labelName);
+    nameRow->addWidget(logoButton);
+    nameRow->addWidget(cameraLabel);
+    nameRow->addWidget(ui->labelName, 1);
+    ui->gridLayout->addLayout(nameRow, 0, 0);
+
+    // between "listen" and "enter"
+    ui->gridLayout->removeWidget(ui->buttonEnter);
+    ui->gridLayout->addWidget(liveButton, 0, 2, 2, 1);
+    ui->gridLayout->addWidget(ui->buttonEnter, 0, 3, 2, 1);
+
+    setProperty("ninjamzap", true);
 }
 
 void JamRoomViewPanel::setWaveDrawingButtonsVisibility(bool showButtons)
