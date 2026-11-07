@@ -80,4 +80,6 @@ private:
     char programName[kVstMaxProgNameLen + 1] = "Default";
 };
 
+typedef AudioEffectX AudioEffect;
+
 #endif
