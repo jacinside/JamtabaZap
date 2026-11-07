@@ -2527,7 +2527,7 @@ void MainWindow::connectInPrivateServer(const QString &server, int serverPort,
 
 void MainWindow::showJamtabaIssuesWebPage()
 {
-    openUrlInUserBrowser("https://github.com/elieserdejesus/JamTaba/issues");
+    openUrlInUserBrowser("https://github.com/jacinside/JamtabaZap/issues");
 }
 
 void MainWindow::showJamtabaWikiWebPage()
