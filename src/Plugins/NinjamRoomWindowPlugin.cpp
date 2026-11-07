@@ -53,7 +53,7 @@ void NinjamRoomWindowPlugin::setHostSyncState(bool syncWithHost)
             ninjamController->stopAndWaitForHostSync(); // stop ninjam streams and wait until user press play/start in host
             ninjamPanel->setCurrentBeat(0);
             QString title = tr("Synchronizing...");
-            QString message = tr("Press play/start in %1 to sync with Jamtaba!").arg(hostName);
+            QString message = tr("Press play/start in %1 to sync with JamtabaZap!").arg(hostName);
             showMessageBox(title, message);
         } else {
             QString title = tr("Trying to sync ...");

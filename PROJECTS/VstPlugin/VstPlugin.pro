@@ -7,6 +7,7 @@ include(../qtwinmigrate/src/qtwinmigrate.pri)
 QTPLUGIN += dsengine # necessary to use QCamera inside VST plugin
 
 JAMTABA_VERSION = $$(JAMTABA_VERSION)
+JAMTABA_VERSION = $$replace(JAMTABA_VERSION, ^v, ) # from a tag like v3.0.0-beta.1
 
 DEFINES += APP_VERSION=\"\\\"$${JAMTABA_VERSION}\\\"\"
 

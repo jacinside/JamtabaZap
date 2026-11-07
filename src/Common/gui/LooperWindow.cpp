@@ -908,10 +908,10 @@ void LooperWindow::showLoadMenu()
 
     // browse
     menu->addSeparator();
-    QAction *browseAction = menu->addAction(tr("Browse JamTaba loops..."));
+    QAction *browseAction = menu->addAction(tr("Browse JamtabaZap loops..."));
     connect(browseAction, &QAction::triggered, [=](){
         QString fileDialogTitle = tr("Open loop file");
-        QString filter = tr("JamTaba Loop Files") + " (*.json)";
+        QString filter = tr("JamtabaZap Loop Files") + " (*.json)";
         QString loopFilePath = QFileDialog::getOpenFileName(this, fileDialogTitle, loopsDir, filter);
         if (!loopFilePath.isEmpty()) {
             QString loopDir = QFileInfo(loopFilePath).dir().absolutePath();

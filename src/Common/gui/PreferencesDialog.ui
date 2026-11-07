@@ -1116,7 +1116,7 @@
        <item>
         <widget class="QGroupBox" name="groupBox_4">
          <property name="title">
-          <string>Remember collapsible sections when starting JamTaba:</string>
+          <string>Remember collapsible sections when starting JamtabaZap:</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_13">
           <property name="spacing">

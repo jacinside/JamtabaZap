@@ -29,6 +29,7 @@ import traceback
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
+APP_VERSION = "3.0.0-beta.1"
 APP = os.environ.get("JT_APP", os.path.join(ROOT, ".deps/build/JamtabaZap.app/Contents/MacOS/JamtabaZap"))
 PEERS = os.path.join(HERE, ".build")
 OUT = os.path.join(HERE, ".out", time.strftime("%Y%m%d-%H%M%S"))
@@ -620,6 +621,27 @@ def s_automation_stays_out_of_the_way(ctx):
     check(hosts == {"localhost"}, f"it only connects to the local server ({hosts})")
 
 
+def serve_json(value):
+    """A local stand-in for a web service. As slow as a real one: the main window connects to the
+    answer while it starts."""
+    body = json.dumps(value).encode()
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            time.sleep(3)
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    web = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=web.serve_forever, daemon=True).start()
+    return f"http://127.0.0.1:{web.server_address[1]}/"
+
+
 ROOM_THEMES = ["Navy_nm", "Black_nm", "Flat", "Game_nm", "Ice", "Rounded", "Volcano_nm"]
 
 
@@ -632,23 +654,9 @@ def s_ninjamzap_rooms_stand_out(ctx):
     rooms = [room("ninbot.com", 2049, 2), room("ninbot.com", 2050, 1), room("video.ninjamzap.com", 2049, 1),
              room("ninjamer.com", 2049, 0), room("evilninjamzap.com", 2049, 0),
              room("ninjamzap.com.evil.net", 2049, 0), room("video.ninjamzap.com", 2050, 0)]
-    body = json.dumps(dict(servers=rooms)).encode()
-
-    class RoomList(http.server.BaseHTTPRequestHandler):
-        def do_GET(self):
-            time.sleep(3)  # as slow as the real one: the main window connects to the list while starting
-            self.send_response(200)
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-
-        def log_message(self, *args):
-            pass
-
-    web = http.server.ThreadingHTTPServer(("127.0.0.1", 0), RoomList)
-    threading.Thread(target=web.serve_forever, daemon=True).start()
+    url = serve_json(dict(servers=rooms))
     ctx.jt = Jamtaba(ctx.dir, marks=False,
-                     extra_env=dict(JT_TEST_ROOMS_URL=f"http://127.0.0.1:{web.server_address[1]}/servers.php"))
+                     extra_env=dict(JT_TEST_ROOMS_URL=url))
 
     ours = {"video.ninjamzap.com:2049", "video.ninjamzap.com:2050"}
     for theme in ROOM_THEMES:
@@ -671,6 +679,22 @@ def s_ninjamzap_rooms_stand_out(ctx):
         check(order[0] == "ninbot.com:2049", f"{theme}: the fullest room stays first ({order[0]})")
         check(order[1] == "video.ninjamzap.com:2049", f"{theme}: ours first among rooms with 1 player ({order[1]})")
         check(order[3] == "video.ninjamzap.com:2050", f"{theme}: ours first among empty rooms ({order[3]})")
+
+
+def s_update_notice(ctx):
+    # the build under test is APP_VERSION below (see the build script)
+    for tag, expected in (("v3.0.0-beta.2", True), ("v3.0.0", True), ("v3.1.0-beta.1", True),
+                          ("v3.0.0-beta.1", False), ("v2.1.18", False), ("not-a-version", False)):
+        url = serve_json([dict(tag_name=tag, body="notes", published_at="2026-11-07T00:00:00Z")])
+        workdir = os.path.join(ctx.dir, tag)
+        os.makedirs(workdir)
+        jt = Jamtaba(workdir, marks=False, extra_env=dict(JT_TEST_VERSION_URL=url))
+        try:
+            time.sleep(1)
+            told = f"JT_TEST new version {tag}" in jt.log()
+        finally:
+            jt.stop()
+        check(told == expected, f"with {APP_VERSION} running, {tag} {'is offered' if expected else 'is not offered'}")
 
 
 def s_vst_scanner(ctx):
@@ -1197,6 +1221,7 @@ SCENARIOS = [
     ("audio presets", s_audio_presets),
     ("automation stays out of the way", s_automation_stays_out_of_the_way),
     ("ninjamzap rooms stand out", s_ninjamzap_rooms_stand_out),
+    ("update notice", s_update_notice),
     ("vst plugin", s_vst_plugin),
     ("vst scanner", s_vst_scanner),
     ("vst real plugin", s_vst_real_plugin),

@@ -19,7 +19,7 @@ using login::UserInfo;
 using login::RoomInfo;
 
 const QString LoginService::LOGIN_SERVER_URL = "http://ninbot.com/app/servers.php";
-const QString LoginService::VERSION_SERVER_URL = "http://jamtaba2.appspot.com/version";
+const QString LoginService::VERSION_SERVER_URL = "https://api.github.com/repos/jacinside/JamtabaZap/releases?per_page=1";
 
 UserInfo::UserInfo(const QString &name, const QString &ip, const QString &countryName, const QString &countryCode, float latitude, float longitude) :
     name(name),
@@ -111,8 +111,13 @@ LoginService::LoginService(QObject *parent) :
     // the first public servers list query
     httpClient.get(QNetworkRequest(roomsUrl));
 
-    // query the current version to jamtaba server using HTTP (is querying github using HTTPS)
-    httpClient.get(QNetworkRequest(QUrl(VERSION_SERVER_URL)));
+    // Automation asks only when a test wants it: an update notice would stop it.
+    const QString testVersionUrl = qEnvironmentVariable("JT_TEST_VERSION_URL");
+    if (!testVersionUrl.isEmpty() || !qEnvironmentVariableIsSet("JT_TEST_CONTROL")) {
+        QNetworkRequest versionRequest(QUrl(testVersionUrl.isEmpty() ? VERSION_SERVER_URL : testVersionUrl));
+        versionRequest.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("JamtabaZap")); // GitHub requires one
+        httpClient.get(versionRequest);
+    }
 
 }
 
@@ -129,14 +134,14 @@ void LoginService::handleServersJson(const QJsonObject &root)
 }
 void LoginService::handleVersionJson(const QJsonObject &root)
 {
-    auto versionTag = root.value("version").toString("error");
-    auto versionDetails = root.value("details").toString("error");
+    auto versionTag = root.value("tag_name").toString("error");
+    auto versionDetails = root.value("body").toString("");
     auto publicationDate = root.value("published_at").toString("");
 
     auto currentVersion = loginserver::Version::fromString(APP_VERSION);
     auto latestVersion = loginserver::Version::fromString(versionTag);
 
-    if (latestVersion.isNewerThan(currentVersion))
+    if (currentVersion.isValid() && latestVersion.isValid() && latestVersion.isNewerThan(currentVersion))
         emit newVersionAvailableForDownload(versionTag, publicationDate, versionDetails);
 
 }
@@ -147,12 +152,16 @@ void LoginService::handleJson(const QString &json)
         return;
 
     auto document = QJsonDocument::fromJson(QByteArray(json.toStdString().c_str()));
-    auto root = document.object();
+    if (document.isArray()) { // GitHub's list of releases, the most recent first
+        const auto releases = document.array();
+        if (!releases.isEmpty())
+            handleVersionJson(releases.first().toObject());
+        return;
+    }
 
+    auto root = document.object();
     if (root.contains("servers"))
         handleServersJson(root);
-    else if (root.contains("version"))
-        handleVersionJson(root);
 }
 
 int getServerPort(const QString &serverName) {

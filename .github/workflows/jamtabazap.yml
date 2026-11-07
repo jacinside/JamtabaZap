@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  JAMTABA_VERSION: 0.1.0-${{ github.run_number }}
+  JAMTABA_VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('3.0.0-dev.{0}', github.run_number) }}
 
 jobs:
   windows-x64:

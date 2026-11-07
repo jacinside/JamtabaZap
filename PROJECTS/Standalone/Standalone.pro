@@ -15,6 +15,7 @@ include(../Jamtaba-common.pri)
 include(../Jamtaba-translations.pri)
 
 JAMTABA_VERSION = $$(JAMTABA_VERSION)
+JAMTABA_VERSION = $$replace(JAMTABA_VERSION, ^v, ) # from a tag like v3.0.0-beta.1
 JAMTABA_BUILDER = $$(JAMTABA_BUILDER)
 
 DEFINES += APP_VERSION=\"\\\"$${JAMTABA_VERSION}\\\"\"

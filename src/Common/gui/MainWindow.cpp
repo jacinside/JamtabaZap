@@ -65,7 +65,7 @@ const quint32 MainWindow::DEFAULT_NETWORK_USAGE_UPDATE_PERIOD = 4000; // 4 secon
 
 const int MainWindow::PERFORMANCE_MONITOR_REFRESH_TIME = 200; //in miliseconds
 
-const QString MainWindow::JAMTABA_CHAT_BOT_NAME("JamTaba");
+const QString MainWindow::JAMTABA_CHAT_BOT_NAME("JamtabaZap");
 
 using persistence::LocalInputTrackSettings;
 using persistence::Channel;
@@ -1313,7 +1313,12 @@ QString MainWindow::sanitizeLatestVersionDetails(const QString &details)
 void MainWindow::showNewVersionAvailableMessage(const QString &versionTag, const QString &publicationDate, const QString &latestVersionDetails)
 {
     hideBusyDialog();
-    QString text = tr("A new Jamtaba version is available for download! Please use the <a href='http://www.jamtaba.com'>new version</a>!");
+    if (qEnvironmentVariableIsSet("JT_TEST_CONTROL")) { // nobody is there to close it
+        qInfo().noquote() << "JT_TEST new version" << versionTag;
+        return;
+    }
+
+    QString text = tr("A new JamtabaZap version is available for download! Please use the <a href='https://github.com/jacinside/JamtabaZap/releases'>new version</a>!");
 
     auto locale = QLocale::system();
     auto dateFormat = locale.dateTimeFormat(QLocale::FormatType::ShortFormat);
@@ -1325,7 +1330,7 @@ void MainWindow::showNewVersionAvailableMessage(const QString &versionTag, const
         text += MainWindow::sanitizeLatestVersionDetails(latestVersionDetails);
     }
 
-    QMessageBox::information(this, tr("New Jamtaba version available!"), text);
+    QMessageBox::information(this, tr("New JamtabaZap version available!"), text);
 }
 
 JamRoomViewPanel *MainWindow::createJamRoomViewPanel(const login::RoomInfo &roomInfo)
@@ -2864,8 +2869,8 @@ bool MainWindow::isTransmiting(int channelID) const
 
 void MainWindow::showJamtabaCurrentVersion()
 {
-    auto title = tr("About Jamtaba");
-    auto text = tr("Jamtaba version is %1").arg(QApplication::applicationVersion());
+    auto title = tr("About JamtabaZap");
+    auto text = tr("JamtabaZap version is %1").arg(QApplication::applicationVersion());
     text += QString(" (%1 bits) \n\n").arg(QSysInfo::WordSize);
     text += QString("Qt: \t %1 \n").arg(qVersion());
     text += QString("FFMpeg:\t %1 \n").arg(av_version_info());

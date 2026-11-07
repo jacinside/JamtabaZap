@@ -1,42 +1,42 @@
 #include "Version.h"
 #include <QtDebug>
+#include <QRegularExpression>
 
 using namespace loginserver;
 
 Version Version::fromString(const QString &string)
 {
-    QStringList versionParts = QString(string).replace(QRegExp("[^0-9\\.]"), "").split(QRegExp("\\."));
-    if(versionParts.length() != 3){
-        qWarning() << "version string with wrong format: " << string << "  versionParts: " << versionParts.length();
+    // 3.0.0, v3.0.0 or 3.0.0-beta.2
+    static const QRegularExpression format("^v?(\\d+)\\.(\\d+)\\.(\\d+)(?:-[A-Za-z]+\\.?(\\d+))?$");
+    const auto match = format.match(string);
+    if (!match.hasMatch()) {
+        qWarning() << "version string with wrong format: " << string;
         return Version();
     }
 
-    int major = versionParts[0].toInt();
-    int minor = versionParts[1].toInt();
-    int build = versionParts[2].toInt();
-
-    return Version(major, minor, build);
+    return Version(match.captured(1).toInt(), match.captured(2).toInt(), match.captured(3).toInt(), match.captured(4).toInt());
 }
 
+bool Version::isValid() const
+{
+    return majorVersion > 0 || minorVersion > 0 || buildNumber > 0;
+}
 
 bool Version::isNewerThan(const Version &other) const
 {
-    if(majorVersion > other.majorVersion){
+    if (majorVersion != other.majorVersion)
+        return majorVersion > other.majorVersion;
+    if (minorVersion != other.minorVersion)
+        return minorVersion > other.minorVersion;
+    if (buildNumber != other.buildNumber)
+        return buildNumber > other.buildNumber;
+    if (prerelease == other.prerelease)
+        return false;
+    if (prerelease == 0) // the final version comes after all its betas
         return true;
-    }
-    else{
-        if(majorVersion == other.majorVersion){
-            if(minorVersion > other.minorVersion){
-                return true;
-            }
-            else{
-                if(minorVersion == other.minorVersion){
-                    return buildNumber > other.buildNumber;
-                }
-            }
-        }
-    }
-    return false;
+    if (other.prerelease == 0)
+        return false;
+    return prerelease > other.prerelease;
 }
 
 Version::Version()
@@ -44,13 +44,15 @@ Version::Version()
     majorVersion = 0;
     minorVersion = 0;
     buildNumber = 0;
+    prerelease = 0;
 }
 
-Version::Version(int major, int minor, int build)
+Version::Version(int major, int minor, int build, int prerelease)
 {
     majorVersion = major;
     minorVersion = minor;
     buildNumber = build;
+    this->prerelease = prerelease;
 }
 
 QString Version::toString() const
