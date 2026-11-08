@@ -6,6 +6,7 @@
 
 #include "UploadIntervalData.h"
 #include "loginserver/LoginService.h"
+#include "loginserver/PresenceReporter.h"
 #include "persistence/Settings.h"
 #include "persistence/UsersDataCache.h"
 #include "audio/core/AudioMixer.h"
@@ -352,6 +353,7 @@ protected:
     static QString LOG_CONFIG_FILE;
 
     LoginService loginService;
+    login::PresenceReporter presenceReporter;
 
     QMap<QString, login::Location> locationCache;
 

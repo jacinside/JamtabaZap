@@ -231,6 +231,7 @@ void MainController::quitFromNinjamServer(const QString &error)
 {
     qCWarning(jtCore) << error;
 
+    presenceReporter.disconnected();
     stopNinjamController();
 
     if (mainWindow)
@@ -241,6 +242,7 @@ void MainController::disconnectFromNinjamServer(const ServerInfo &server)
 {
     Q_UNUSED(server);
 
+    presenceReporter.disconnected();
     stopNinjamController();
 
     if (mainWindow)
@@ -300,6 +302,8 @@ void MainController::connectInNinjamServer(const ServerInfo &server)
                                                 server.getMaxChannels()));
     else
         qCritical() << "mainWindow is null!";
+
+    presenceReporter.connected(server.getHostName(), server.getPort(), getUserName());
 
     qCDebug(jtCore) << "starting ninjamController...";
 

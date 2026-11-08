@@ -697,6 +697,73 @@ def s_update_notice(ctx):
         check(told == expected, f"with {APP_VERSION} running, {tag} {'is offered' if expected else 'is not offered'}")
 
 
+def record_posts():
+    """A local stand-in for the NinjamZap backend that keeps every POST it gets."""
+    posts = []
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
+            posts.append((time.time(), self.path, json.loads(body or b"{}")))
+            self.send_response(204)
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    web = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=web.serve_forever, daemon=True).start()
+    return f"http://127.0.0.1:{web.server_address[1]}", posts
+
+
+def s_presence(ctx):
+    """In a room, the NinjamZap backend knows it, as it knows of the NinjamZap app's guests: that's
+    what notifies the people subscribed to the room."""
+    url, posts = record_posts()
+    ctx.server = Server(ctx.dir)
+    ctx.jt = Jamtaba(ctx.dir, marks=False,
+                     extra_env=dict(JT_TEST_PRESENCE_URL=url, JT_TEST_PRESENCE_HEARTBEAT_MS="5000"))
+
+    def wait(path, n):
+        deadline = time.time() + 20
+        while time.time() < deadline and sum(p == path for _, p, _ in posts) < n:
+            time.sleep(0.2)
+        return [b for _, p, b in posts if p == path]
+
+    time.sleep(3)
+    check(not posts, "nothing is reported before entering a room")
+    ctx.jt.connect(ctx.server.port)
+    joined = wait("/presence/connected", 1)
+    check(joined, "entering a room reports it")
+    first = joined[0]
+    check(first.get("host") == "localhost" and first.get("port") == ctx.server.port,
+          f"with the room ({first.get('host')}:{first.get('port')})")
+    check(first.get("ninjamUsername") == USER, f"and the user name ({first.get('ninjamUsername')})")
+    check(first.get("platform") == "jamtaba" and first.get("formFactor") == "desktop",
+          f"as JamtabaZap on a desktop ({first.get('platform')}, {first.get('formFactor')})")
+    check(set(first) == {"host", "port", "ninjamUsername", "sessionId", "platform", "formFactor"},
+          f"only the fields the backend accepts ({sorted(first)})")
+    check(len(wait("/presence/connected", 3)) >= 3, "and it keeps the presence alive while in the room")
+
+    ctx.jt.cmd("leave")
+    left = wait("/presence/disconnected", 1)
+    check(left, "leaving the room reports it")
+    check(left and left[0] == dict(host="localhost", port=ctx.server.port, ninjamUsername=USER),
+          f"with the room and name only ({left[0] if left else None})")
+    n = len(posts)
+    time.sleep(8)
+    check(len(posts) == n, "and the heartbeat stops")
+
+    ctx.jt.connect(ctx.server.port)
+    again = wait("/presence/connected", 4)
+    check(len(again) >= 4 and again[-1]["sessionId"] == first["sessionId"],
+          "joining again reports it, in the same app session")
+    ctx.server.stop()
+    ctx.server = None
+    check(len(wait("/presence/disconnected", 2)) == 2, "a lost connection also reports the leave")
+    check(ctx.jt.alive(), "no crash")
+
+
 def s_slow_login(ctx):
     """A server far away: its first message can arrive in two pieces, as it does through a cloud
     proxy. The client has to wait for it and send nothing before logging in."""
@@ -1275,6 +1342,7 @@ SCENARIOS = [
     ("ninjamzap rooms stand out", s_ninjamzap_rooms_stand_out),
     ("slow login", s_slow_login),
     ("update notice", s_update_notice),
+    ("presence", s_presence),
     ("vst plugin", s_vst_plugin),
     ("vst scanner", s_vst_scanner),
     ("vst real plugin", s_vst_real_plugin),
