@@ -97,12 +97,15 @@ jobs:
           find . -type f -name 'JamtabaZap*'
           grep -q libx264 JamtabaZap || { echo "the executable has no libx264"; exit 1; }
           test -f VstScanner
+      - name: AppImage
+        shell: bash
+        run: |
+          apt-get update -qq && apt-get install -y -qq curl > /dev/null
+          .github/scripts/linux-appimage.sh PROJECTS/Standalone/JamtabaZap PROJECTS/Standalone/VstScanner JamtabaZap-x86_64.AppImage
       - uses: actions/upload-artifact@v4
         with:
           name: JamtabaZap-linux-x64
-          path: |
-            PROJECTS/Standalone/**/JamtabaZap
-            PROJECTS/Standalone/**/VstScanner
+          path: JamtabaZap-x86_64.AppImage
           if-no-files-found: error
 
   macos-x86_64:
@@ -153,7 +156,7 @@ jobs:
         run: |
           mkdir out
           (cd artifacts/JamtabaZap-windows-x64 && zip -qj ../../out/JamtabaZap-windows-x64.zip $(find . -name JamtabaZap.exe) $(find . -name VstScanner.exe))
-          (cd artifacts/JamtabaZap-linux-x64 && chmod +x $(find . -name JamtabaZap) $(find . -name VstScanner) && zip -qj ../../out/JamtabaZap-linux-x64.zip $(find . -name JamtabaZap) $(find . -name VstScanner))
+          cp artifacts/JamtabaZap-linux-x64/JamtabaZap-x86_64.AppImage out/ && chmod +x out/JamtabaZap-x86_64.AppImage
           cp artifacts/JamtabaZap-macos-x86_64/JamtabaZap-macos-x86_64.zip out/
           (cd artifacts/JamtabaZapVST-windows-x64 && zip -qj ../../out/JamtabaZap-VST-windows-x64.zip $(find . -name JamtabaZapVST.dll))
           gh release create "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --prerelease --title "JamtabaZap $GITHUB_REF_NAME" --notes "Beta. See the README for how to install it and its known limits."

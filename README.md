@@ -4,6 +4,8 @@ A fork of [JamTaba](https://github.com/elieserdejesus/JamTaba), based on [defter
 
 **Status: beta.** Download it from [Releases](https://github.com/jacinside/JamtabaZap/releases).
 
+[Leer en español](README.es.md)
+
 ## What it adds
 
 - H.264 video synchronized with each musician's audio interval, on servers that relay video. On other servers it falls back to JamTaba's previous video format, in SD.
@@ -15,8 +17,14 @@ A fork of [JamTaba](https://github.com/elieserdejesus/JamTaba), based on [defter
 
 - **Windows:** unzip and run `JamtabaZap.exe`. It needs an ASIO driver; [ASIO4ALL](https://www.asio4all.org/) works if your interface has none. The build isn't signed, so Windows SmartScreen warns about it: choose "More info", then "Run anyway".
 - **macOS:** Intel build, which also runs on Apple Silicon through Rosetta. It isn't signed: right-click the app and choose "Open".
-- **Linux:** run the `JamtabaZap` executable.
+- **Linux:** a single file, `JamtabaZap-x86_64.AppImage`, for 64-bit distributions. It brings the libraries it needs; nothing has to be installed.
+  1. Make it executable: right-click it, Properties > Permissions, and tick "Allow executing file as program". Or, in a terminal: `chmod +x JamtabaZap-x86_64.AppImage`
+  2. Double-click it, or run `./JamtabaZap-x86_64.AppImage`
+  
+  If it says FUSE is missing, start it with `./JamtabaZap-x86_64.AppImage --appimage-extract-and-run`, or install the `fuse3` package.
 - **VST plugin (Windows):** unzip `JamtabaZap-VST-windows-x64.zip` and copy `JamtabaZapVST.dll` to your DAW's VST folder.
+
+JamTaba's [user guide](https://github.com/elieserdejesus/JamTaba/wiki/Jamtaba's-user-guide) covers the rest of the app.
 
 ## Known limits
 
