@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Javier Cordero
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Loads the VST2 plugin the way a DAW does, on real Windows: checks what it tells the host, opens
 // its editor, runs audio through it for a while and closes it. Exits non-zero at the first failure.
 #include <windows.h>

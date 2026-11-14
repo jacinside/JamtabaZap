@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Javier Cordero
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Real njclient sender emitting Jamtaba's wire format: JTBv, raw Annex-B in >=4 KB writes, channel 1, flags 0.
 // usage: nzjtbv host port name stream.h264 fps seconds [fourcc]
 #include "TestClient.h"

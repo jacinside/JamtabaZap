@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Javier Cordero
+# SPDX-License-Identifier: GPL-3.0-or-later
 """End-to-end suite for Jamtaba's NinjamZap video, against local NINJAM servers only.
 
 Each scenario starts a fresh ninjamzap-server container and a fresh Jamtaba (isolated HOME, audio

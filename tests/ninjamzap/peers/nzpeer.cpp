@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Javier Cordero
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Real njclient sender with real H.264 in the spec's wire format.
 // usage: nzpeer host port name framesfile spsfile fps [video:0|1] [seconds]
 #include "TestClient.h"

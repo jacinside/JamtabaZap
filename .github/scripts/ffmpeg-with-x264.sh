@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (c) 2026 Javier Cordero
+# SPDX-License-Identifier: GPL-3.0-or-later
 # The build images ship FFmpeg without libx264, and synchronized video relies on x264's
 # options. Rebuilds the same FFmpeg version over the image's own, with libx264.
 # usage: ffmpeg-with-x264.sh [cross-prefix]

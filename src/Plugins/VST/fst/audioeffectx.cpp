@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Javier Cordero
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "audioeffectx.h"
 
 AudioEffectX::AudioEffectX(audioMasterCallback audioMaster, VstInt32 programs, VstInt32 parameters) :

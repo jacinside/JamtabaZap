@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Javier Cordero
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Does the sender's audio clock lose time? Gaps between its audio interval BEGINs, against the
 nominal interval, for any Jamtaba binary. usage: clock.py <app binary> <seconds> <camera:0|1> <avmarks:0|1>"""
 import json,os,sys,tempfile,time

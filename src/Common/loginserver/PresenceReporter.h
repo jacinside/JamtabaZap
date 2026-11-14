@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Javier Cordero
+// SPDX-License-Identifier: GPL-3.0-or-later
 #ifndef PRESENCE_REPORTER_H
 #define PRESENCE_REPORTER_H
 

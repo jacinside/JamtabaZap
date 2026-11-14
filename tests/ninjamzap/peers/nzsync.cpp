@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Javier Cordero
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Real receiver core: records its audio output and, per delivered image frame, the output sample
 // at delivery. usage: nzsync host port seconds outdir sender-prefix [stall-at-s stall-ms]
 #include "TestClient.h"

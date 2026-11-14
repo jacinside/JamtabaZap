@@ -33,7 +33,11 @@ JamTaba's [user guide](https://github.com/elieserdejesus/JamTaba/wiki/Jamtaba's-
 
 ## Credits and license
 
-All credit for JamTaba goes to its author, Elieser de Jesus, and its contributors, and to defterai for the version this fork builds on. JamTaba has no license file ([issue #1210](https://github.com/elieserdejesus/JamTaba/issues/1210)), and this fork doesn't add one. The Steinberg VST2 SDK files that come with JamTaba have been removed here; they remain in the history inherited from the original repository. VST2 plugins are hosted through [FST](https://git.iem.at/zmoelnig/FST), a free implementation of the interface under the GPL (`src/third_party/fst`).
+All credit for JamTaba goes to its author, Elieser de Jesus, and its contributors, and to defterai for the version this fork builds on.
+
+JamtabaZap is developed by Javier Cordero, creator of [NinjamZap](https://www.ninjamzap.com). It adds synchronized H.264 video for NinjamZap rooms, video and audio quality settings, video kept in step with voice chat, and VST2 hosting through FST. That code is licensed under the GPL 3 or later.
+
+The code inherited from JamTaba keeps its original terms: the upstream repository has no license file ([issue #1210](https://github.com/elieserdejesus/JamTaba/issues/1210)), and this fork doesn't add one. VST2 plugins are hosted through [FST](https://git.iem.at/zmoelnig/FST), a free implementation of the interface under the GPL. Details, third-party components and open questions are in [LICENSES.md](LICENSES.md).
 
 The commits on top of JamTaba are kept small so that they can be moved onto newer versions of it.
 

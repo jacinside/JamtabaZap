@@ -33,6 +33,6 @@ La [guía de uso de JamTaba](https://github.com/elieserdejesus/JamTaba/wiki/Jamt
 
 ## Créditos y licencia
 
-Todo el crédito de JamTaba es de su autor, Elieser de Jesus, y de sus colaboradores, y de defterai por la versión sobre la que se construye este fork. Los detalles de licencia están en el [README en inglés](README.md#credits-and-license).
+Todo el crédito de JamTaba es de su autor, Elieser de Jesus, y de sus colaboradores, y de defterai por la versión sobre la que se construye este fork. JamtabaZap lo desarrolla Javier Cordero, creador de [NinjamZap](https://www.ninjamzap.com): suma video H.264 sincronizado para las salas de NinjamZap, ajustes de calidad de video y audio, video al paso del voice chat y soporte de plugins VST2 con FST. Ese código está bajo la GPL 3 o posterior; el heredado de JamTaba mantiene sus términos originales. Los detalles están en [LICENSES.md](LICENSES.md).
 
 Los problemas se reportan desde Help > Report bugs or suggest improvements, o en [Issues](https://github.com/jacinside/JamtabaZap/issues).

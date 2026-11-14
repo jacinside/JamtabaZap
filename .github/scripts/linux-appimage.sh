@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (c) 2026 Javier Cordero
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Packs the Linux build into one AppImage that carries the libraries most distros lack
 # (ICU in particular: the build machine's version is not the one newer distros ship).
 # Usage: linux-appimage.sh <JamtabaZap executable> <VstScanner executable> <output .AppImage>

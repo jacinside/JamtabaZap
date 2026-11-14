@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Javier Cordero
+// SPDX-License-Identifier: GPL-3.0-or-later
 // A VST2 plugin for the suite, built on the same header as JamtabaZap's host. It plays a constant
 // tone, and writes everything the host asks of it, and what it finds out about the host, to the file
 // in JT_TEST_VST_LOG.

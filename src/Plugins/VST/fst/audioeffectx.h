@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Javier Cordero
+// SPDX-License-Identifier: GPL-3.0-or-later
 #ifndef JT_AUDIOEFFECTX_H
 #define JT_AUDIOEFFECTX_H
 
