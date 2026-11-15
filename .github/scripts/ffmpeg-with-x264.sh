@@ -18,10 +18,14 @@ echo "FFmpeg prefix: $PREFIX, x264: $X264_PREFIX"
 apt-get update -qq && apt-get install -y -qq nasm > /dev/null
 nasm -v
 
-# VideoLAN's server sometimes refuses CI runners: GitHub's mirror has the same commit
-git clone --quiet -b stable https://code.videolan.org/videolan/x264.git /tmp/x264 \
-    || git clone --quiet -b stable https://github.com/mirror/x264.git /tmp/x264
-(cd /tmp/x264 && git checkout --quiet b35605ace3ddf7c1a5d67a2eb553f034aef41d55)
+# The pinned commit, fetched by its hash: VideoLAN's server sometimes refuses CI runners or
+# answers 502, and GitHub's mirror has the commit outside its stable branch.
+X264_COMMIT=b35605ace3ddf7c1a5d67a2eb553f034aef41d55
+git init --quiet /tmp/x264
+for url in https://code.videolan.org/videolan/x264.git https://github.com/mirror/x264.git; do
+    git -C /tmp/x264 fetch --quiet --depth 1 "$url" "$X264_COMMIT" && break
+done
+git -C /tmp/x264 checkout --quiet "$X264_COMMIT"
 X264_ARGS=(--prefix="$X264_PREFIX" --enable-static --disable-cli --enable-pic)
 [ -n "$CROSS" ] && X264_ARGS+=(--host=x86_64-w64-mingw32 --cross-prefix="$CROSS")
 (cd /tmp/x264 && ./configure "${X264_ARGS[@]}" > /tmp/x264-configure.log 2>&1 \
