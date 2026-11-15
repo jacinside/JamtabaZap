@@ -159,7 +159,7 @@
     </message>
     <message>
         <source>ok</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">ok</translation>
     </message>
 </context>
 <context>
@@ -270,6 +270,22 @@
     <message>
         <source>Private Server</source>
         <translation>Приватний сервер</translation>
+    </message>
+    <message>
+        <source>NinjamZap website</source>
+        <translation>Сайт NinjamZap</translation>
+    </message>
+    <message>
+        <source>NinjamZap room with video</source>
+        <translation>Кімната NinjamZap з відео</translation>
+    </message>
+    <message>
+        <source>LIVE</source>
+        <translation>НАЖИВО</translation>
+    </message>
+    <message>
+        <source>Watch this room in your browser</source>
+        <translation>Дивитися цю кімнату в браузері</translation>
     </message>
 </context>
 <context>
@@ -508,7 +524,7 @@
     </message>
     <message>
         <source>Browse JamTaba loops...</source>
-        <translation>Переглянути лупи JamTaba...</translation>
+        <translation type="vanished">Переглянути лупи JamTaba...</translation>
     </message>
     <message>
         <source>Open loop file</source>
@@ -528,7 +544,7 @@
     </message>
     <message>
         <source>JamTaba Loop Files</source>
-        <translation>JamTaba луп файли</translation>
+        <translation type="vanished">JamTaba луп файли</translation>
     </message>
     <message>
         <source>L</source>
@@ -585,6 +601,14 @@
     <message>
         <source>looper layers</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Browse JamtabaZap loops...</source>
+        <translation>Переглянути лупи JamtabaZap...</translation>
+    </message>
+    <message>
+        <source>JamtabaZap Loop Files</source>
+        <translation>JamtabaZap луп файли</translation>
     </message>
 </context>
 <context>
@@ -767,7 +791,7 @@
     </message>
     <message>
         <source>Type your user name here</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Введіть ваше ім&apos;я користувача тут</translation>
     </message>
     <message>
         <source>Master fader</source>
@@ -784,6 +808,10 @@
     <message>
         <source>Select language using this menu</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Video ...</source>
+        <translation>Відео ...</translation>
     </message>
 </context>
 <context>
@@ -802,11 +830,11 @@
     </message>
     <message>
         <source>A new Jamtaba version is available for download! Please use the &lt;a href=&apos;http://www.jamtaba.com&apos;&gt;new version&lt;/a&gt;!</source>
-        <translation>Нова версія Jamtaba доступна для завантаження! Будь-ласка використовуйте &lt;a href=&apos;http://www.jamtaba.com&apos;&gt;new version&lt;/a&gt;!</translation>
+        <translation type="vanished">Нова версія Jamtaba доступна для завантаження! Будь-ласка використовуйте &lt;a href=&apos;http://www.jamtaba.com&apos;&gt;new version&lt;/a&gt;!</translation>
     </message>
     <message>
         <source>New Jamtaba version available!</source>
-        <translation>Нова версія Jamtaba доступна!</translation>
+        <translation type="vanished">Нова версія Jamtaba доступна!</translation>
     </message>
     <message>
         <source>Warning!</source>
@@ -826,11 +854,11 @@
     </message>
     <message>
         <source>About Jamtaba</source>
-        <translation>Про Jamtaba</translation>
+        <translation type="vanished">Про Jamtaba</translation>
     </message>
     <message>
         <source>Jamtaba version is %1</source>
-        <translation>Версія Jamtaba є %1</translation>
+        <translation type="vanished">Версія Jamtaba є %1</translation>
     </message>
     <message>
         <source>These chords (%1 measures) can&apos;t be used in a %2 bpi interval!</source>
@@ -974,6 +1002,57 @@
     </message>
     <message>
         <source>Public chat error - service is temporarily unavailable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Video in this room</source>
+        <translation>Відео в цій кімнаті</translation>
+    </message>
+    <message>
+        <source>This room doesn&apos;t support NinjamZap video, so your video goes out in SD, in the Jamtaba format, whatever quality you chose. NinjamZap users may not see you.</source>
+        <translation>Ця кімната не підтримує відео NinjamZap, тому ваше відео надсилається в SD, у форматі Jamtaba, незалежно від обраної якості. Користувачі NinjamZap можуть вас не бачити.</translation>
+    </message>
+    <message>
+        <source>Don&apos;t show this again</source>
+        <translation>Більше не показувати</translation>
+    </message>
+    <message>
+        <source>A new JamtabaZap version is available for download! Please use the &lt;a href=&apos;https://github.com/jacinside/JamtabaZap/releases&apos;&gt;new version&lt;/a&gt;!</source>
+        <translation>Нова версія JamtabaZap доступна для завантаження! Будь-ласка використовуйте &lt;a href=&apos;https://github.com/jacinside/JamtabaZap/releases&apos;&gt;new version&lt;/a&gt;!</translation>
+    </message>
+    <message>
+        <source>New JamtabaZap version available!</source>
+        <translation>Нова версія JamtabaZap доступна!</translation>
+    </message>
+    <message>
+        <source>About JamtabaZap</source>
+        <translation>Про JamtabaZap</translation>
+    </message>
+    <message>
+        <source>JamtabaZap version is %1</source>
+        <translation>Версія JamtabaZap є %1</translation>
+    </message>
+</context>
+<context>
+    <name>MainWindowPlugin</name>
+    <message>
+        <source>Window Size</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Width</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Increase</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Decrease</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Height</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1171,7 +1250,7 @@
     </message>
     <message>
         <source>Preferences</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">Налаштування</translation>
     </message>
     <message>
         <source>MIDI Sync</source>
@@ -1230,6 +1309,34 @@
     </message>
     <message>
         <source>User chors</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>NinjamRoomWindowPlugin</name>
+    <message>
+        <source>Host sync</source>
+        <extracomment>This is the title of MessageDialot showed when user click in &quot;Sync with host&quot; button</extracomment>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The BPM has changed! Please stop %1 and change BPM to %2!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Synchronizing...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Press play/start in %1 to sync with JamtabaZap!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Trying to sync ...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change %1 BPM to %2 and try sync again!</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1301,7 +1408,7 @@
     <name>PluginScanDialog</name>
     <message>
         <source>[JamTaba] Scanning plugins ...</source>
-        <translation>[JamTaba] сканування плагінів ...</translation>
+        <translation type="vanished">[JamTaba] сканування плагінів ...</translation>
     </message>
     <message>
         <source>This is the plugin scanning dialog box</source>
@@ -1326,6 +1433,10 @@
     <message>
         <source>No plugins found!</source>
         <translation>Не знайдено плагінів!</translation>
+    </message>
+    <message>
+        <source>[JamtabaZap] Scanning plugins ...</source>
+        <translation>[JamtabaZap] сканування плагінів ...</translation>
     </message>
 </context>
 <context>
@@ -1472,19 +1583,19 @@
     </message>
     <message>
         <source>Low (good for slow internet connections)</source>
-        <translation>Низька (хороша для повільного інтернету)</translation>
+        <translation type="vanished">Низька (хороша для повільного інтернету)</translation>
     </message>
     <message>
         <source>Normal (default)</source>
-        <translation>Нормальна (за замовчуванням)</translation>
+        <translation type="vanished">Нормальна (за замовчуванням)</translation>
     </message>
     <message>
         <source>High (for good internet connections only)</source>
-        <translation>Висока (лише для хорошого інтернету)</translation>
+        <translation type="vanished">Висока (лише для хорошого інтернету)</translation>
     </message>
     <message>
         <source>Custom quality</source>
-        <translation>Користувацька</translation>
+        <translation type="vanished">Користувацька</translation>
     </message>
     <message>
         <source>Multi Track Recording</source>
@@ -1580,7 +1691,7 @@
     </message>
     <message>
         <source>Remember collapsible sections when starting JamTaba:</source>
-        <translation>Зберігати розділи що згортаються, коли запускається JamTaba:</translation>
+        <translation type="vanished">Зберігати розділи що згортаються, коли запускається JamTaba:</translation>
     </message>
     <message>
         <source>Local Channels (left side)</source>
@@ -1773,6 +1884,42 @@
     <message>
         <source>Enable/disable sending MIDI clock sync:</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remember collapsible sections when starting JamtabaZap:</source>
+        <translation>Зберігати розділи що згортаються, коли запускається JamtabaZap:</translation>
+    </message>
+    <message>
+        <source>Video quality you send:</source>
+        <translation>Якість відео, яке ви надсилаєте:</translation>
+    </message>
+    <message>
+        <source>On servers without video support, video stays in SD.</source>
+        <translation>На серверах без підтримки відео зображення залишається в SD.</translation>
+    </message>
+    <message>
+        <source>Receive video from other musicians</source>
+        <translation>Отримувати відео від інших музикантів</translation>
+    </message>
+    <message>
+        <source>Video</source>
+        <translation>Відео</translation>
+    </message>
+    <message>
+        <source>Economy (64 kbps)</source>
+        <translation>Економна (64 kbps)</translation>
+    </message>
+    <message>
+        <source>Standard (128 kbps, default)</source>
+        <translation>Стандартна (128 kbps, типово)</translation>
+    </message>
+    <message>
+        <source>High (192 kbps)</source>
+        <translation>Висока (192 kbps)</translation>
+    </message>
+    <message>
+        <source>Studio (256 kbps)</source>
+        <translation>Студійна (256 kbps)</translation>
     </message>
 </context>
 <context>

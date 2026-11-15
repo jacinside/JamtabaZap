@@ -271,6 +271,22 @@
         <source>Private Server</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>NinjamZap website</source>
+        <translation>NinjamZap-Website</translation>
+    </message>
+    <message>
+        <source>NinjamZap room with video</source>
+        <translation>NinjamZap-Raum mit Video</translation>
+    </message>
+    <message>
+        <source>LIVE</source>
+        <translation>LIVE</translation>
+    </message>
+    <message>
+        <source>Watch this room in your browser</source>
+        <translation>Diesen Raum im Browser ansehen</translation>
+    </message>
 </context>
 <context>
     <name>LocalTrackGroupView</name>
@@ -508,7 +524,7 @@
     </message>
     <message>
         <source>Browse JamTaba loops...</source>
-        <translation>suche JamTaba Loops...</translation>
+        <translation type="vanished">suche JamTaba Loops...</translation>
     </message>
     <message>
         <source>Open loop file</source>
@@ -528,7 +544,7 @@
     </message>
     <message>
         <source>JamTaba Loop Files</source>
-        <translation>Loopdateien</translation>
+        <translation type="vanished">Loopdateien</translation>
     </message>
     <message>
         <source>L</source>
@@ -585,6 +601,14 @@
     <message>
         <source>looper layers</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Browse JamtabaZap loops...</source>
+        <translation>suche JamtabaZap Loops...</translation>
+    </message>
+    <message>
+        <source>JamtabaZap Loop Files</source>
+        <translation>Loopdateien</translation>
     </message>
 </context>
 <context>
@@ -785,6 +809,10 @@
         <source>Select language using this menu</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Video ...</source>
+        <translation>Video ...</translation>
+    </message>
 </context>
 <context>
     <name>MainWindow</name>
@@ -802,11 +830,11 @@
     </message>
     <message>
         <source>A new Jamtaba version is available for download! Please use the &lt;a href=&apos;http://www.jamtaba.com&apos;&gt;new version&lt;/a&gt;!</source>
-        <translation>Neue jamtaba version zum download! bitte nutze &lt;a href=&apos;http://www.jamtaba.com&apos;&gt;www.jamtaba.com&lt;/a&gt;!</translation>
+        <translation type="vanished">Neue jamtaba version zum download! bitte nutze &lt;a href=&apos;http://www.jamtaba.com&apos;&gt;www.jamtaba.com&lt;/a&gt;!</translation>
     </message>
     <message>
         <source>New Jamtaba version available!</source>
-        <translation>neue jamtaba version verfügbar!</translation>
+        <translation type="vanished">neue jamtaba version verfügbar!</translation>
     </message>
     <message>
         <source>Warning!</source>
@@ -834,11 +862,11 @@
     </message>
     <message>
         <source>About Jamtaba</source>
-        <translation>über jamtaba</translation>
+        <translation type="vanished">über jamtaba</translation>
     </message>
     <message>
         <source>Jamtaba version is %1</source>
-        <translation>jamtaba version ist %1</translation>
+        <translation type="vanished">jamtaba version ist %1</translation>
     </message>
     <message>
         <source>These chords (%1 measures) can&apos;t be used in a %2 bpi interval!</source>
@@ -976,28 +1004,56 @@
         <source>Public chat error - service is temporarily unavailable</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Video in this room</source>
+        <translation>Video in diesem Raum</translation>
+    </message>
+    <message>
+        <source>This room doesn&apos;t support NinjamZap video, so your video goes out in SD, in the Jamtaba format, whatever quality you chose. NinjamZap users may not see you.</source>
+        <translation>Dieser Raum unterstützt kein NinjamZap-Video, daher wird dein Video unabhängig von der gewählten Qualität in SD im Jamtaba-Format gesendet. NinjamZap-Nutzer sehen dich möglicherweise nicht.</translation>
+    </message>
+    <message>
+        <source>Don&apos;t show this again</source>
+        <translation>Nicht mehr anzeigen</translation>
+    </message>
+    <message>
+        <source>A new JamtabaZap version is available for download! Please use the &lt;a href=&apos;https://github.com/jacinside/JamtabaZap/releases&apos;&gt;new version&lt;/a&gt;!</source>
+        <translation>Neue jamtaba version zum download! bitte nutze &lt;a href=&apos;https://github.com/jacinside/JamtabaZap/releases&apos;&gt;www.jamtaba.com&lt;/a&gt;!</translation>
+    </message>
+    <message>
+        <source>New JamtabaZap version available!</source>
+        <translation>neue jamtaba version verfügbar!</translation>
+    </message>
+    <message>
+        <source>About JamtabaZap</source>
+        <translation>über jamtaba</translation>
+    </message>
+    <message>
+        <source>JamtabaZap version is %1</source>
+        <translation>jamtaba version ist %1</translation>
+    </message>
 </context>
 <context>
     <name>MainWindowPlugin</name>
     <message>
         <source>Window Size</source>
-        <translation type="vanished">Fenstergrösse</translation>
+        <translation>Fenstergrösse</translation>
     </message>
     <message>
         <source>Increase</source>
-        <translation type="vanished">vergrössern</translation>
+        <translation>vergrössern</translation>
     </message>
     <message>
         <source>Decrease</source>
-        <translation type="vanished">verkleinern</translation>
+        <translation>verkleinern</translation>
     </message>
     <message>
         <source>Width</source>
-        <translation type="vanished">breite</translation>
+        <translation>breite</translation>
     </message>
     <message>
         <source>Height</source>
-        <translation type="vanished">höhe</translation>
+        <translation>höhe</translation>
     </message>
 </context>
 <context>
@@ -1269,15 +1325,15 @@
     <message>
         <source>Host sync</source>
         <extracomment>This is the title of MessageDialot showed when user click in &quot;Sync with host&quot; button</extracomment>
-        <translation type="vanished">Host sync</translation>
+        <translation>Host sync</translation>
     </message>
     <message>
         <source>The BPM has changed! Please stop %1 and change BPM to %2!</source>
-        <translation type="vanished">BPM verändert! Bitte stop %1 und ändere BPM zu %2!</translation>
+        <translation>BPM verändert! Bitte stop %1 und ändere BPM zu %2!</translation>
     </message>
     <message>
         <source>Synchronizing...</source>
-        <translation type="vanished">Syncronisiere...</translation>
+        <translation>Syncronisiere...</translation>
     </message>
     <message>
         <source>Press play/start in %1 to sync with Jamtaba!</source>
@@ -1285,11 +1341,15 @@
     </message>
     <message>
         <source>Trying to sync ...</source>
-        <translation type="vanished">versuche zu syncen ...</translation>
+        <translation>versuche zu syncen ...</translation>
     </message>
     <message>
         <source>Change %1 BPM to %2 and try sync again!</source>
-        <translation type="vanished">ändere %1 BPM zu %2 und versuch nochmal zu syncen!</translation>
+        <translation>ändere %1 BPM zu %2 und versuch nochmal zu syncen!</translation>
+    </message>
+    <message>
+        <source>Press play/start in %1 to sync with JamtabaZap!</source>
+        <translation>drücke play/start in %1 zum syncen mit JamtabaZap!</translation>
     </message>
 </context>
 <context>
@@ -1360,7 +1420,7 @@
     <name>PluginScanDialog</name>
     <message>
         <source>[JamTaba] Scanning plugins ...</source>
-        <translation>[JamTaba] plugins scannen ...</translation>
+        <translation type="vanished">[JamTaba] plugins scannen ...</translation>
     </message>
     <message>
         <source>This is the plugin scanning dialog box</source>
@@ -1385,6 +1445,10 @@
     <message>
         <source>No plugins found!</source>
         <translation>keine plugins gefunden!</translation>
+    </message>
+    <message>
+        <source>[JamtabaZap] Scanning plugins ...</source>
+        <translation>[JamtabaZap] plugins scannen ...</translation>
     </message>
 </context>
 <context>
@@ -1531,19 +1595,19 @@
     </message>
     <message>
         <source>Low (good for slow internet connections)</source>
-        <translation>Niedrig (gut bei langsamer Internetverbindung)</translation>
+        <translation type="vanished">Niedrig (gut bei langsamer Internetverbindung)</translation>
     </message>
     <message>
         <source>Normal (default)</source>
-        <translation>Normal (default)</translation>
+        <translation type="vanished">Normal (default)</translation>
     </message>
     <message>
         <source>High (for good internet connections only)</source>
-        <translation>Hoch (nur bei schneller Internetverbindung)</translation>
+        <translation type="vanished">Hoch (nur bei schneller Internetverbindung)</translation>
     </message>
     <message>
         <source>Custom quality</source>
-        <translation>Benutzerdefinierte Qualität</translation>
+        <translation type="vanished">Benutzerdefinierte Qualität</translation>
     </message>
     <message>
         <source>Multi Track Recording</source>
@@ -1639,7 +1703,7 @@
     </message>
     <message>
         <source>Remember collapsible sections when starting JamTaba:</source>
-        <translation>ein-ausblend bereich bei JamTaba start:</translation>
+        <translation type="vanished">ein-ausblend bereich bei JamTaba start:</translation>
     </message>
     <message>
         <source>Local Channels (left side)</source>
@@ -1832,6 +1896,42 @@
     <message>
         <source>Enable/disable sending MIDI clock sync:</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remember collapsible sections when starting JamtabaZap:</source>
+        <translation>ein-ausblend bereich bei JamtabaZap start:</translation>
+    </message>
+    <message>
+        <source>Video quality you send:</source>
+        <translation>Qualität des gesendeten Videos:</translation>
+    </message>
+    <message>
+        <source>On servers without video support, video stays in SD.</source>
+        <translation>Auf Servern ohne Videounterstützung bleibt das Video in SD.</translation>
+    </message>
+    <message>
+        <source>Receive video from other musicians</source>
+        <translation>Video von anderen Musikern empfangen</translation>
+    </message>
+    <message>
+        <source>Video</source>
+        <translation>Video</translation>
+    </message>
+    <message>
+        <source>Economy (64 kbps)</source>
+        <translation>Sparsam (64 kbps)</translation>
+    </message>
+    <message>
+        <source>Standard (128 kbps, default)</source>
+        <translation>Standard (128 kbps, Voreinstellung)</translation>
+    </message>
+    <message>
+        <source>High (192 kbps)</source>
+        <translation>Hoch (192 kbps)</translation>
+    </message>
+    <message>
+        <source>Studio (256 kbps)</source>
+        <translation>Studio (256 kbps)</translation>
     </message>
 </context>
 <context>

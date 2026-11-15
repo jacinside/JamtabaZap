@@ -278,6 +278,22 @@
         <source>Private Server</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>NinjamZap website</source>
+        <translation>NinjamZapのウェブサイト</translation>
+    </message>
+    <message>
+        <source>NinjamZap room with video</source>
+        <translation>ビデオ対応のNinjamZapルーム</translation>
+    </message>
+    <message>
+        <source>LIVE</source>
+        <translation>ライブ</translation>
+    </message>
+    <message>
+        <source>Watch this room in your browser</source>
+        <translation>このルームをブラウザで見る</translation>
+    </message>
 </context>
 <context>
     <name>LocalTrackGroupView</name>
@@ -515,7 +531,7 @@
     </message>
     <message>
         <source>Browse JamTaba loops...</source>
-        <translation>JamTabaループをブラウズ...</translation>
+        <translation type="vanished">JamTabaループをブラウズ...</translation>
     </message>
     <message>
         <source>Open loop file</source>
@@ -535,7 +551,7 @@
     </message>
     <message>
         <source>JamTaba Loop Files</source>
-        <translation>JamTabaループファイル</translation>
+        <translation type="vanished">JamTabaループファイル</translation>
     </message>
     <message>
         <source>L</source>
@@ -592,6 +608,14 @@
     <message>
         <source>looper layers</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Browse JamtabaZap loops...</source>
+        <translation>JamtabaZapループをブラウズ...</translation>
+    </message>
+    <message>
+        <source>JamtabaZap Loop Files</source>
+        <translation>JamtabaZapループファイル</translation>
     </message>
 </context>
 <context>
@@ -792,6 +816,10 @@
         <source>Select language using this menu</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Video ...</source>
+        <translation>ビデオ ...</translation>
+    </message>
 </context>
 <context>
     <name>MainWindow</name>
@@ -809,11 +837,11 @@
     </message>
     <message>
         <source>A new Jamtaba version is available for download! Please use the &lt;a href=&apos;http://www.jamtaba.com&apos;&gt;new version&lt;/a&gt;!</source>
-        <translation>&lt;a href=&apos;http://www.jamtaba.com&apos;&gt;新しいバージョンのJamtaba&lt;/a&gt;がダウンロード可能です!</translation>
+        <translation type="vanished">&lt;a href=&apos;http://www.jamtaba.com&apos;&gt;新しいバージョンのJamtaba&lt;/a&gt;がダウンロード可能です!</translation>
     </message>
     <message>
         <source>New Jamtaba version available!</source>
-        <translation>新しいバージョンのJamtabaがあります!</translation>
+        <translation type="vanished">新しいバージョンのJamtabaがあります!</translation>
     </message>
     <message>
         <source>Warning!</source>
@@ -833,11 +861,11 @@
     </message>
     <message>
         <source>About Jamtaba</source>
-        <translation>Jamtabaについて</translation>
+        <translation type="vanished">Jamtabaについて</translation>
     </message>
     <message>
         <source>Jamtaba version is %1</source>
-        <translation>現在利用中のJamtabaのバージョンは%1です</translation>
+        <translation type="vanished">現在利用中のJamtabaのバージョンは%1です</translation>
     </message>
     <message>
         <source>These chords (%1 measures) can&apos;t be used in a %2 bpi interval!</source>
@@ -984,28 +1012,56 @@
         <source>Public chat error - service is temporarily unavailable</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Video in this room</source>
+        <translation>このルームでのビデオ</translation>
+    </message>
+    <message>
+        <source>This room doesn&apos;t support NinjamZap video, so your video goes out in SD, in the Jamtaba format, whatever quality you chose. NinjamZap users may not see you.</source>
+        <translation>このルームはNinjamZapビデオに対応していないため、選んだ画質に関係なく、あなたのビデオはJamtaba形式のSDで送信されます。NinjamZapユーザーにはあなたの映像が見えない場合があります。</translation>
+    </message>
+    <message>
+        <source>Don&apos;t show this again</source>
+        <translation>今後表示しない</translation>
+    </message>
+    <message>
+        <source>A new JamtabaZap version is available for download! Please use the &lt;a href=&apos;https://github.com/jacinside/JamtabaZap/releases&apos;&gt;new version&lt;/a&gt;!</source>
+        <translation>&lt;a href=&apos;https://github.com/jacinside/JamtabaZap/releases&apos;&gt;新しいバージョンのJamtabaZap&lt;/a&gt;がダウンロード可能です!</translation>
+    </message>
+    <message>
+        <source>New JamtabaZap version available!</source>
+        <translation>新しいバージョンのJamtabaZapがあります!</translation>
+    </message>
+    <message>
+        <source>About JamtabaZap</source>
+        <translation>JamtabaZapについて</translation>
+    </message>
+    <message>
+        <source>JamtabaZap version is %1</source>
+        <translation>現在利用中のJamtabaZapのバージョンは%1です</translation>
+    </message>
 </context>
 <context>
     <name>MainWindowPlugin</name>
     <message>
         <source>Window Size</source>
-        <translation type="vanished">ウィンドウサイズ</translation>
+        <translation>ウィンドウサイズ</translation>
     </message>
     <message>
         <source>Increase</source>
-        <translation type="vanished">増加</translation>
+        <translation>増加</translation>
     </message>
     <message>
         <source>Decrease</source>
-        <translation type="vanished">減少</translation>
+        <translation>減少</translation>
     </message>
     <message>
         <source>Width</source>
-        <translation type="obsolete">幅</translation>
+        <translation type="unfinished">幅</translation>
     </message>
     <message>
         <source>Height</source>
-        <translation type="obsolete">高さ</translation>
+        <translation type="unfinished">高さ</translation>
     </message>
 </context>
 <context>
@@ -1279,15 +1335,15 @@
     <message>
         <source>Host sync</source>
         <extracomment>This is the title of MessageDialot showed when user click in &quot;Sync with host&quot; button</extracomment>
-        <translation type="vanished">ホスト同期</translation>
+        <translation>ホスト同期</translation>
     </message>
     <message>
         <source>The BPM has changed! Please stop %1 and change BPM to %2!</source>
-        <translation type="vanished">BPMが変更されました！%1を停止してBPMを%2に変更してください!</translation>
+        <translation>BPMが変更されました！%1を停止してBPMを%2に変更してください!</translation>
     </message>
     <message>
         <source>Synchronizing...</source>
-        <translation type="vanished">同期中...</translation>
+        <translation>同期中...</translation>
     </message>
     <message>
         <source>Press play/start in %1 to sync with Jamtaba!</source>
@@ -1295,11 +1351,15 @@
     </message>
     <message>
         <source>Trying to sync ...</source>
-        <translation type="vanished">同期を試みています ...</translation>
+        <translation>同期を試みています ...</translation>
     </message>
     <message>
         <source>Change %1 BPM to %2 and try sync again!</source>
-        <translation type="vanished">%1のBPMを%2に変更して、もう一度同期を試みてください!</translation>
+        <translation>%1のBPMを%2に変更して、もう一度同期を試みてください!</translation>
+    </message>
+    <message>
+        <source>Press play/start in %1 to sync with JamtabaZap!</source>
+        <translation>JamtabaZapと同期するには%1で再生/開始を押してください!</translation>
     </message>
 </context>
 <context>
@@ -1370,7 +1430,7 @@
     <name>PluginScanDialog</name>
     <message>
         <source>[JamTaba] Scanning plugins ...</source>
-        <translation>[JamTaba] プラグイン走査中...</translation>
+        <translation type="vanished">[JamTaba] プラグイン走査中...</translation>
     </message>
     <message>
         <source>This is the plugin scanning dialog box</source>
@@ -1395,6 +1455,10 @@
     <message>
         <source>No plugins found!</source>
         <translation type="unfinished">プラグインが見つかりません!</translation>
+    </message>
+    <message>
+        <source>[JamtabaZap] Scanning plugins ...</source>
+        <translation>[JamtabaZap] プラグイン走査中...</translation>
     </message>
 </context>
 <context>
@@ -1541,19 +1605,19 @@
     </message>
     <message>
         <source>Low (good for slow internet connections)</source>
-        <translation>低 (低速回線向け)</translation>
+        <translation type="vanished">低 (低速回線向け)</translation>
     </message>
     <message>
         <source>Normal (default)</source>
-        <translation>中 (標準)</translation>
+        <translation type="vanished">中 (標準)</translation>
     </message>
     <message>
         <source>High (for good internet connections only)</source>
-        <translation>高 (高速回線向け)</translation>
+        <translation type="vanished">高 (高速回線向け)</translation>
     </message>
     <message>
         <source>Custom quality</source>
-        <translation>カスタム</translation>
+        <translation type="vanished">カスタム</translation>
     </message>
     <message>
         <source>Multi Track Recording</source>
@@ -1649,7 +1713,7 @@
     </message>
     <message>
         <source>Remember collapsible sections when starting JamTaba:</source>
-        <translation type="unfinished">JamTabaを起動するときに折りたたみ可能なセクションを覚えています:</translation>
+        <translation type="obsolete">JamTabaを起動するときに折りたたみ可能なセクションを覚えています:</translation>
     </message>
     <message>
         <source>Local Channels (left side)</source>
@@ -1842,6 +1906,42 @@
     <message>
         <source>Enable/disable sending MIDI clock sync:</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remember collapsible sections when starting JamtabaZap:</source>
+        <translation>JamtabaZapを起動するときに折りたたみ可能なセクションを覚えています:</translation>
+    </message>
+    <message>
+        <source>Video quality you send:</source>
+        <translation>送信するビデオの画質:</translation>
+    </message>
+    <message>
+        <source>On servers without video support, video stays in SD.</source>
+        <translation>ビデオ非対応のサーバーでは、ビデオはSDのままになります。</translation>
+    </message>
+    <message>
+        <source>Receive video from other musicians</source>
+        <translation>他のミュージシャンのビデオを受信する</translation>
+    </message>
+    <message>
+        <source>Video</source>
+        <translation>ビデオ</translation>
+    </message>
+    <message>
+        <source>Economy (64 kbps)</source>
+        <translation>エコノミー (64 kbps)</translation>
+    </message>
+    <message>
+        <source>Standard (128 kbps, default)</source>
+        <translation>標準 (128 kbps、デフォルト)</translation>
+    </message>
+    <message>
+        <source>High (192 kbps)</source>
+        <translation>高音質 (192 kbps)</translation>
+    </message>
+    <message>
+        <source>Studio (256 kbps)</source>
+        <translation>スタジオ (256 kbps)</translation>
     </message>
 </context>
 <context>

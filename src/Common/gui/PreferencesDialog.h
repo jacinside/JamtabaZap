@@ -33,6 +33,7 @@ public:
     };
 
     virtual void initialize(PreferencesTab initialTab, const persistence::Settings *settings, const QMap<QString, QString> &jamRecorders);
+    void showVideoTab();
 
 signals:
     void customMetronomeSelected(const QString &primaryBeatAudioFile, const QString &offBeatAudioFile, const QString &accentBeatAudioFile);
@@ -72,6 +73,7 @@ private slots:
 private:
     void populateEncoderQualityComboBox();
     void createVideoTab();
+    QWidget *videoTab = nullptr;
     bool usingCustomEncodingQuality();
     QString selectAudioFile(QString caption, QString initialDir);
     void refreshMetronomeControlsStyleSheet();

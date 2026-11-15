@@ -412,6 +412,7 @@
      <string>Preferences</string>
     </property>
     <addaction name="actionAudioPreferences"/>
+    <addaction name="actionVideoPreferences"/>
     <addaction name="actionMidiPreferences"/>
     <addaction name="actionVstPreferences"/>
     <addaction name="actionRecording"/>
@@ -496,6 +497,11 @@
   <action name="actionAudioPreferences">
    <property name="text">
     <string>Audio ...</string>
+   </property>
+  </action>
+  <action name="actionVideoPreferences">
+   <property name="text">
+    <string>Video ...</string>
    </property>
   </action>
   <action name="actionMidiPreferences">

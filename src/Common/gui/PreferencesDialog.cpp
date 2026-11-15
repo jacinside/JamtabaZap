@@ -202,6 +202,7 @@ void PreferencesDialog::accept()
 void PreferencesDialog::createVideoTab()
 {
     auto tab = new QWidget(this);
+    videoTab = tab;
     auto layout = new QFormLayout(tab);
 
     auto quality = new QComboBox(tab);
@@ -225,6 +226,12 @@ void PreferencesDialog::createVideoTab()
     layout->addRow(QString(), receive);
 
     ui->prefsTab->addTab(tab, tr("Video"));
+}
+
+void PreferencesDialog::showVideoTab()
+{
+    if (videoTab)
+        ui->prefsTab->setCurrentWidget(videoTab);
 }
 
 void PreferencesDialog::populateEncoderQualityComboBox()

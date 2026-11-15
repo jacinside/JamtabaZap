@@ -2688,6 +2688,8 @@ void MainWindow::openPreferencesDialog(QAction *action)
 
         qDebug(jtGUI) << "Initializing preferences dialog";
         dialog->initialize(initialTab, &mainController->getSettings(), mainController->getJamRecoders());// initializing here to avoid call virtual methods inside PreferencesDialog constructor
+        if (action == ui.actionVideoPreferences)
+            dialog->showVideoTab(); // the Video tab is the last one: chosen by its widget, not by index
 
         qCDebug(jtGUI) << "Showing preferences dialog";
         dialog->show();
