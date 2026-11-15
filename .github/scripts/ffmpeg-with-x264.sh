@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # The build images ship FFmpeg without libx264, and synchronized video relies on x264's
 # options. Rebuilds the same FFmpeg version over the image's own, with libx264.
+# The images' own libx264 has no assembly (plain C, several times slower: HD can't keep up on
+# a laptop), so x264 is built here too, with its assembly, over the image's.
 # usage: ffmpeg-with-x264.sh [cross-prefix]
 set -euo pipefail
 CROSS="${1:-}"
@@ -15,6 +17,20 @@ echo "FFmpeg prefix: $PREFIX, x264: $X264_PREFIX"
 # Without nasm, FFmpeg builds without its assembly: decoding and color conversion take far more CPU.
 apt-get update -qq && apt-get install -y -qq nasm > /dev/null
 nasm -v
+
+git clone --quiet -b stable https://code.videolan.org/videolan/x264.git /tmp/x264
+(cd /tmp/x264 && git checkout --quiet b35605ace3ddf7c1a5d67a2eb553f034aef41d55)
+X264_ARGS=(--prefix="$X264_PREFIX" --enable-static --disable-cli --enable-pic)
+[ -n "$CROSS" ] && X264_ARGS+=(--host=x86_64-w64-mingw32 --cross-prefix="$CROSS")
+(cd /tmp/x264 && ./configure "${X264_ARGS[@]}" > /tmp/x264-configure.log 2>&1 \
+    || { tail -30 /tmp/x264-configure.log; exit 1; })
+grep -E '^asm:' /tmp/x264/config.log /tmp/x264-configure.log 2>/dev/null | head -2 || true
+grep -q '^#define HAVE_X86_INLINE_ASM 1\|^#define HAVE_MMX 1' /tmp/x264/config.h || { echo "x264 would build without assembly"; exit 1; }
+make -C /tmp/x264 -j"$(nproc)" > /tmp/x264-make.log 2>&1 || { tail -30 /tmp/x264-make.log; exit 1; }
+make -C /tmp/x264 install-lib-static > /dev/null
+"${CROSS}nm" "$X264_PREFIX/lib/libx264.a" 2>/dev/null | grep -q -i 'satd.*avx2' || { echo "libx264.a has no AVX2 code"; exit 1; }
+echo "x264 with assembly installed in $X264_PREFIX"
+
 git clone --quiet --depth 1 -b n4.4.1 https://github.com/FFmpeg/FFmpeg.git /tmp/ffmpeg
 cd /tmp/ffmpeg
 ARGS=(--prefix="$PREFIX" --enable-gpl --enable-libx264 --enable-static --disable-shared --enable-pic
