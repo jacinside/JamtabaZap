@@ -32,9 +32,23 @@ struct GpuDevice
     AVHWDeviceType type = AV_HWDEVICE_TYPE_NONE;
 };
 
+// FFmpeg's warnings and errors in the log, the first ones only: they say why a GPU decoder fails.
+void logFFmpeg(void *object, int level, const char *format, va_list args)
+{
+    static std::atomic_int logged { 0 };
+    if (level > AV_LOG_WARNING || logged >= 200)
+        return;
+    char line[1024];
+    int prefix = 1;
+    av_log_format_line2(object, level, format, args, line, sizeof(line), &prefix);
+    logged++;
+    qWarning().noquote() << "FFmpeg:" << QString::fromUtf8(line).trimmed();
+}
+
 const GpuDevice &gpuDevice()
 {
     static const GpuDevice device = [] {
+        av_log_set_callback(logFFmpeg);
         GpuDevice d;
         if (qEnvironmentVariableIsSet("JT_NO_GPU_DECODING")) {
             qInfo() << "Video decoding: CPU only, GPU decoding turned off (JT_NO_GPU_DECODING)";
@@ -175,7 +189,7 @@ public:
         int ret = avcodec_send_packet(context, &packet);
         if (ret < 0 && ret != AVERROR(EAGAIN)) {
             if (onGpu())
-                return fallBackToCpu(avcc, wantImage, ret);
+                return fallBackToCpu(avcc, wantImage, ret, "sending a frame");
             qWarning() << "Error decoding video:" << av_error_to_qt_string(ret);
             return QImage();
         }
@@ -190,9 +204,9 @@ public:
                 image = toImage();
         }
         if (copyError < 0)
-            return fallBackToCpu(avcc, wantImage, copyError);
+            return fallBackToCpu(avcc, wantImage, copyError, "copying a frame back");
         if (ret != AVERROR(EAGAIN) && ret != AVERROR_EOF && onGpu())
-            return fallBackToCpu(avcc, wantImage, ret);
+            return fallBackToCpu(avcc, wantImage, ret, "receiving a frame");
         return image;
     }
 
@@ -278,10 +292,10 @@ private:
     }
 
     // The GPU failed this stream: decode it on the CPU from now on, starting again with this frame.
-    QImage fallBackToCpu(const QByteArray &avcc, bool wantImage, int error)
+    QImage fallBackToCpu(const QByteArray &avcc, bool wantImage, int error, const char *where)
     {
-        qWarning().noquote() << QStringLiteral("Video stream %1: GPU video decoding failed (%2), decoding on the CPU from now on")
-                                .arg(id).arg(av_error_to_qt_string(error));
+        qWarning().noquote() << QStringLiteral("Video stream %1: GPU video decoding failed %2 (%3), decoding on the CPU from now on")
+                                .arg(id).arg(where).arg(av_error_to_qt_string(error));
         loggedDecoder = QStringLiteral("CPU, after the GPU failed");
         gpuFailed = true;
         copyError = 0;

@@ -7,6 +7,7 @@
 #include <QFile>
 #include <QDebug>
 #include <QThreadPool>
+#include <QMutex>
 #include <atomic>
 
 #include "FFMpegCommon.h"
@@ -34,6 +35,8 @@ public:
     void restart();
     void setVideoBitRate(uint bitRate);
     int takeSkippedFrames() { return skippedFrames.exchange(0); }
+    QString takeTimingReport(); // where the time per frame went since the last call, for the log
+    void addCaptureTime(qint64 microseconds); // the camera frame's pick, scale and preview, on the main thread
 
     void encodeImage(const QImage &image, bool async = true);
     void encodeAudioFrame();
@@ -121,6 +124,16 @@ private:
     static constexpr int MAX_PENDING_FRAMES = 2;
 
     QThreadPool threadPool;
+
+    // Diagnostics: where each frame's time goes (see takeTimingReport)
+    struct Timing {
+        int submitted = 0, encoded = 0, rescaled = 0;
+        qint64 convertUs = 0, convertMaxUs = 0, encodeUs = 0, encodeMaxUs = 0;
+        qint64 captureUs = 0, captureMaxUs = 0, gapMaxMs = 0;
+        qint64 lastSubmitMs = 0;
+        int imageFormat = -1;
+    } timing;
+    QMutex timingMutex;
 };
 
 inline void FFMpegMuxer::setVideoBitRate(uint bitRate)

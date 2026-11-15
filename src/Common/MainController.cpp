@@ -1,3 +1,4 @@
+#include <QElapsedTimer>
 #include <QtGlobal>
 
 #ifdef Q_OS_WIN
@@ -366,7 +367,10 @@ void MainController::requestCameraFrame(int intervalPosition)
         bool isFirstPart = intervalPosition == 0;
         if (isFirstPart || canGrabNewFrameFromCamera()) {
             static int frameID = 0;
+            QElapsedTimer pickTime;
+            pickTime.start();
             auto frame = mainWindow->pickCameraFrame();
+            videoEncoder.addCaptureTime(pickTime.nsecsElapsed() / 1000);
             if (TestAvMarks::enabled())
                 frame = TestAvMarks::frame(getVideoResolution(), intervalPosition, getSampleRate());
             processCapturedFrame(frameID++, frame);
@@ -489,6 +493,7 @@ void MainController::reportSkippedVideoFrames()
     const auto skipped = videoEncoder.takeSkippedFrames();
     if (skipped > 0)
         qInfo() << "Video encoder can't keep up: skipped" << skipped << "frames in the last interval";
+    qInfo().noquote() << videoEncoder.takeTimingReport();
 }
 
 void MainController::beginSyncedVideoInterval(const ninjam::MessageGuid &audioGuid)

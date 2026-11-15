@@ -7,6 +7,9 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QtConcurrent/QtConcurrent>
+#include <QElapsedTimer>
+#include <QDateTime>
+#include <QMutexLocker>
 #include <QMutex>
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -136,6 +139,16 @@ void FFMpegMuxer::encodeImage(const QImage &image, bool async)
 
     // The encoder may not keep up: frames are skipped rather than piling up, which would use more
     // memory and send them later and later.
+    {
+        QMutexLocker locker(&timingMutex);
+        const auto now = QDateTime::currentMSecsSinceEpoch();
+        if (timing.lastSubmitMs > 0)
+            timing.gapMaxMs = qMax(timing.gapMaxMs, now - timing.lastSubmitMs);
+        timing.lastSubmitMs = now;
+        timing.submitted++;
+        timing.imageFormat = image.format();
+    }
+
     if (async && pendingFrames >= MAX_PENDING_FRAMES) {
         skippedFrames++;
         return;
@@ -158,6 +171,10 @@ void FFMpegMuxer::encodeImage(const QImage &image, bool async)
         if (encodeVideo && !image.isNull()) {
             // the frame was picked before a size change that has already reached the encoder
             const auto sized = image.size() == videoResolution ? image : image.scaled(videoResolution);
+            if (sized.size() != image.size()) {
+                QMutexLocker locker(&timingMutex);
+                timing.rescaled++;
+            }
             encodeVideo = !doEncodeVideoFrame(sized);
         }
         return 0;
@@ -177,6 +194,31 @@ void FFMpegMuxer::encodeAudioFrame()
 
     //if (encodeAudio)
     //    encodeAudio = !doEncodeAudioFrame();
+}
+
+void FFMpegMuxer::addCaptureTime(qint64 microseconds)
+{
+    QMutexLocker locker(&timingMutex);
+    timing.captureUs += microseconds;
+    timing.captureMaxUs = qMax(timing.captureMaxUs, microseconds);
+}
+
+QString FFMpegMuxer::takeTimingReport()
+{
+    QMutexLocker locker(&timingMutex);
+    const auto t = timing;
+    timing = Timing();
+    timing.lastSubmitMs = t.lastSubmitMs;
+    const auto avg = [](qint64 total, int count) { return count > 0 ? total / count / 1000.0 : 0.0; };
+    return QStringLiteral("Video timing: %1x%2 at %3 fps, %4 x264 threads | camera frames %5 (largest gap %6 ms, image format %7, rescaled %8) | "
+                          "pick+scale+preview on the main thread avg %9 ms max %10 ms | encoded %11: convert avg %12 ms max %13 ms, x264 avg %14 ms max %15 ms")
+        .arg(videoResolution.width()).arg(videoResolution.height()).arg(videoFrameRate)
+        .arg(codecContext ? codecContext->thread_count : -1)
+        .arg(t.submitted).arg(t.gapMaxMs).arg(t.imageFormat).arg(t.rescaled)
+        .arg(avg(t.captureUs, t.submitted), 0, 'f', 1).arg(t.captureMaxUs / 1000.0, 0, 'f', 1)
+        .arg(t.encoded)
+        .arg(avg(t.convertUs, t.encoded), 0, 'f', 1).arg(t.convertMaxUs / 1000.0, 0, 'f', 1)
+        .arg(avg(t.encodeUs, t.encoded), 0, 'f', 1).arg(t.encodeMaxUs / 1000.0, 0, 'f', 1);
 }
 
 void FFMpegMuxer::startNewInterval()
@@ -662,8 +704,12 @@ bool FFMpegMuxer::doEncodeVideoFrame(const QImage &image)
         return false;
     }
 
+    QElapsedTimer stage;
+    stage.start();
     if (!image.isNull())
         fillFrameWithImageData(image);
+    const qint64 convertUs = stage.nsecsElapsed() / 1000;
+    stage.restart();
 
     frame->pict_type = (!image.isNull() && keyFrameRequested.exchange(false)) ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_NONE;
 
@@ -686,6 +732,16 @@ bool FFMpegMuxer::doEncodeVideoFrame(const QImage &image)
     av_init_packet(&packet);
 
     ret = avcodec_receive_packet(codecContext, &packet);
+
+    if (!image.isNull()) {
+        const qint64 encodeUs = stage.nsecsElapsed() / 1000;
+        QMutexLocker locker(&timingMutex);
+        timing.encoded++;
+        timing.convertUs += convertUs;
+        timing.convertMaxUs = qMax(timing.convertMaxUs, convertUs);
+        timing.encodeUs += encodeUs;
+        timing.encodeMaxUs = qMax(timing.encodeMaxUs, encodeUs);
+    }
 
     if (ret == 0 || ret == AVERROR(EAGAIN)) {
         if (ret == 0) { // we have a decoded frame?
