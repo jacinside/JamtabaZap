@@ -17,7 +17,7 @@ jobs:
     container:
       image: defter/jamtaba-win64:v5.15.7
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: FFmpeg with x264
         shell: bash
         run: .github/scripts/ffmpeg-with-x264.sh x86_64-w64-mingw32.static-
@@ -32,7 +32,7 @@ jobs:
           find . -name '*.exe'
           grep -q libx264 release/JamtabaZap.exe || { echo "the executable has no libx264"; exit 1; }
           test -f release/VstScanner.exe
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: JamtabaZap-windows-x64
           path: PROJECTS/Standalone/**/*.exe
@@ -43,7 +43,7 @@ jobs:
     container:
       image: defter/jamtaba-win64:v5.15.7
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: FFmpeg with x264
         shell: bash
         run: .github/scripts/ffmpeg-with-x264.sh x86_64-w64-mingw32.static-
@@ -57,7 +57,7 @@ jobs:
           test -f release/JamtabaZapVST.dll
           cd ../..
           x86_64-w64-mingw32.static-g++ -std=c++14 -w -Isrc/third_party/fst tests/ninjamzap/peers/vstsmoke.cpp -static -o vstsmoke.exe
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: JamtabaZapVST-windows-x64
           path: |
@@ -70,7 +70,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: JamtabaZapVST-windows-x64
       - name: Load it like a DAW does
@@ -84,7 +84,7 @@ jobs:
     container:
       image: defter/jamtaba-linux:v5.15.7
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: FFmpeg with x264
         shell: bash
         run: .github/scripts/ffmpeg-with-x264.sh
@@ -104,7 +104,7 @@ jobs:
         run: |
           apt-get update -qq && apt-get install -y -qq curl > /dev/null
           .github/scripts/linux-appimage.sh PROJECTS/Standalone/JamtabaZap PROJECTS/Standalone/VstScanner JamtabaZap-x86_64.AppImage
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: JamtabaZap-linux-x64
           path: JamtabaZap-x86_64.AppImage
@@ -113,7 +113,7 @@ jobs:
   macos-x86_64:
     runs-on: macos-15-intel
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Qt and the static libraries
         run: |
           python3 -m venv .aqt && .aqt/bin/pip -q install aqtinstall
@@ -136,7 +136,7 @@ jobs:
           $Q/macdeployqt JamtabaZap.app -executable=JamtabaZap.app/Contents/MacOS/VstScanner
           codesign --force --sign - --deep JamtabaZap.app
           ditto -c -k --keepParent JamtabaZap.app JamtabaZap-macos-x86_64.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: JamtabaZap-macos-x86_64
           path: build/JamtabaZap-macos-x86_64.zip
@@ -149,7 +149,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: artifacts
       - name: Publish a pre-release
