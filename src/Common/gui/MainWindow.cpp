@@ -337,6 +337,12 @@ void MainWindow::runTestCommand(const QStringList &args)
     } else if (cmd == QStringLiteral("camera")) {
         if (cameraView)
             cameraView->activate(on);
+    } else if (cmd == QStringLiteral("channel")) { // channel add | channel remove <index>
+        if (args.value(1) == QStringLiteral("add"))
+            addChannelsGroup(-1);
+        else if (args.value(1) == QStringLiteral("remove"))
+            removeChannelsGroup(args.value(2).toInt());
+        qInfo() << "JT_TEST channels" << getChannelGroupsCount() << "video" << getVideoChannelIndex();
     } else if (cmd == QStringLiteral("transmit")) {
         mainController->setTransmitingStatus(0, on);
     } else if (cmd == QStringLiteral("voice")) {
@@ -419,8 +425,8 @@ void MainWindow::changeCameraStatus(bool activated)
         if (activated) {
             mainController->setVideoProperties(QSize());
             addVideoChannel();
-        } else if (localGroupChannels.size() > 1 && localGroupChannels.at(1)->isVideoChannel()) {
-            removeChannelsGroup(localGroupChannels.at(1)->getChannelIndex());
+        } else if (auto videoChannel = getVideoChannel()) {
+            removeChannelsGroup(videoChannel->getChannelIndex());
         }
         return;
     }
@@ -446,12 +452,8 @@ void MainWindow::changeCameraStatus(bool activated)
 
             setCameraComboVisibility(false);
 
-            if (localGroupChannels.size() > 1) {
-                auto secondChannel = localGroupChannels.at(1);
-                if (secondChannel && secondChannel->isVideoChannel()) {
-                    removeChannelsGroup(secondChannel->getChannelIndex());
-                }
-            }
+            if (auto videoChannel = getVideoChannel())
+                removeChannelsGroup(videoChannel->getChannelIndex());
 
             return;
         }
@@ -482,33 +484,66 @@ void MainWindow::changeCameraStatus(bool activated)
 
         cameraView->activate(false);
     }
-    else { // if the camera is correctly activated we need need create a 2nd channel to xmit the video
+    else { // if the camera is correctly activated we need a channel to xmit the video
 
         addVideoChannel();
     }
 }
 
+// The video goes in its own channel, the first index after the audio channels.
 void MainWindow::addVideoChannel()
 {
-    while (localGroupChannels.size() > 1)
-        removeChannelsGroup(localGroupChannels.at(1)->getChannelIndex()); // delete the 2nd channel if exists
+    if (getVideoChannel())
+        return;
 
-    addChannelsGroup(-1); // add the 2nd channel using the default icon
+    auto channelIndex = localGroupChannels.size();
+    auto videoChannel = addLocalChannel(channelIndex, -1, true);
+    videoChannel->setPeakMeterMode(localGroupChannels.first()->isShowingPeakMeterOnly());
 
-    auto secondChannel = localGroupChannels.at(1);
-    secondChannel->setPeakMeterMode(localGroupChannels.first()->isShowingPeakMeterOnly());
-    if (secondChannel) {
-        auto channelIndex = secondChannel->getChannelIndex();
-        auto voiceChatActivated = mainController->isVoiceChatActivated(channelIndex);
-        if (voiceChatActivated) {
-            mainController->setVoiceChatStatus(channelIndex, false);
-        }
+    if (mainController->isVoiceChatActivated(channelIndex))
+        mainController->setVoiceChatStatus(channelIndex, false);
 
-        secondChannel->setAsVideoChannel();
+    videoChannel->setAsVideoChannel();
 
-        if (mainController->isPlayingInNinjamRoom())
-            mainController->sendNewChannelsNames(getChannelsMetadata()); // the channel is now video-only
+    updateLocalInputChannelsGeometry();
+
+    if (mainController->isPlayingInNinjamRoom())
+        mainController->sendNewChannelsNames(getChannelsMetadata()); // announced already video-only
+}
+
+LocalTrackGroupView *MainWindow::getVideoChannel() const
+{
+    for (auto channel : localGroupChannels) {
+        if (channel->isVideoChannel())
+            return channel;
     }
+    return nullptr;
+}
+
+int MainWindow::getVideoChannelIndex() const
+{
+    auto videoChannel = getVideoChannel();
+    return videoChannel ? videoChannel->getChannelIndex() : -1;
+}
+
+int MainWindow::getAudioChannelGroupsCount() const
+{
+    return localGroupChannels.size() - (getVideoChannel() ? 1 : 0);
+}
+
+// Out of the window and of the audio engine, without telling the server.
+void MainWindow::takeOutLocalChannel(LocalTrackGroupView *channel)
+{
+    ui.localTracksLayout->removeWidget(channel);
+    localGroupChannels.removeOne(channel);
+
+    // The inputs leave the audio engine now rather than when the view is deleted: a channel
+    // created right away with the same index must not join them (and their transmit status).
+    channel->visitTracks<LocalTrackView>([&](LocalTrackView *track) {
+        mainController->removeInputTrackNode(track->getInputIndex());
+    });
+
+    channel->deleteLater();
 }
 
 void MainWindow::selectVideoPreset(int preset)
@@ -979,17 +1014,25 @@ void MainWindow::handlePublicRoomStreamError(const QString &msg)
 void MainWindow::removeChannelsGroup(int channelIndex)
 {
     if (localGroupChannels.size() > 1) { // the first channel group can't be removed
-        if (channelIndex >= 0 && channelIndex < localGroupChannels.size()) {
+        if (channelIndex > 0 && channelIndex < localGroupChannels.size()) {
             auto channel = localGroupChannels.at(channelIndex);
-            ui.localTracksLayout->removeWidget(channel);
-            localGroupChannels.removeAt(channelIndex);
+
+            // the video channel comes after the audio channels: it moves down to fill the gap
+            auto videoChannel = getVideoChannel();
+            bool movingVideoChannel = videoChannel && videoChannel->getChannelIndex() > channelIndex;
+            if (movingVideoChannel)
+                takeOutLocalChannel(videoChannel);
+
+            takeOutLocalChannel(channel);
 
             localGroupChannels.first()->setToWide();
 
-            channel->deleteLater();
-
-            // TODO Refactoring: emit a signal 'localChannel removed' and catch this signal in NinjamController
-            mainController->sendRemovedChannelMessage(channelIndex);
+            if (movingVideoChannel) {
+                addVideoChannel(); // announces the channels, the video one in its new index
+            } else {
+                // TODO Refactoring: emit a signal 'localChannel removed' and catch this signal in NinjamController
+                mainController->sendRemovedChannelMessage(channelIndex);
+            }
 
             if (channel->isVideoChannel())
                 cameraView->activate(false); // deactivate the camera if the 2nd channel is deleted
@@ -1008,11 +1051,20 @@ void MainWindow::highlightChannelGroup(int index) const
 
 void MainWindow::addChannelsGroup(int instrumentIndex)
 {
+    // the video channel comes after the audio channels: it moves up to leave its index to the new one
+    auto videoChannel = getVideoChannel();
+    if (videoChannel)
+        takeOutLocalChannel(videoChannel);
+
     int channelIndex = localGroupChannels.size();
     addLocalChannel(channelIndex, instrumentIndex, true);
 
+    if (videoChannel)
+        addVideoChannel(); // announces the channels, the video one in its new index
+
     if (mainController->isPlayingInNinjamRoom()) {
-        mainController->sendNewChannelsNames(getChannelsMetadata());
+        if (!videoChannel)
+            mainController->sendNewChannelsNames(getChannelsMetadata());
 
         // create an encoder for this channel in next interval
         bool voiceChannelActivated = mainController->isVoiceChatActivated(channelIndex);
@@ -1095,6 +1147,9 @@ void MainWindow::loadPreset(const Preset &preset)
     if (preset.isValid()) {
         removeAllInputLocalTracks();
         initializeLocalInputChannels(preset.inputTrackSettings);
+
+        if (cameraIsActivated())
+            addVideoChannel(); // the preset brings audio channels only
 
         //set all loaded channels xmit to ON
         for (auto trackGroupView : qAsConst(localGroupChannels)) {

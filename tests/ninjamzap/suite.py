@@ -1317,6 +1317,61 @@ def s_stress_six_hd(ctx):
     stress(ctx, 6)
 
 
+def s_video_after_audio_channels(ctx):
+    """The video takes the first channel after the audio ones and moves when one is added or removed:
+    a second audio channel stays while the camera is on."""
+    ctx.server = Server(ctx.dir)
+    ctx.sniff = Sniffer(ctx.server.port)
+    receiver = Jamtaba(ctx.dir, name="receiver", marks=False)
+    ctx.cleanup.append(receiver.stop)
+    ctx.jt = Jamtaba(ctx.dir)
+    receiver.connect(ctx.server.port)
+    ctx.jt.connect(ctx.server.port)
+    ctx.jt.cmd("camera on")
+    check(ctx.sniff.wait_intervals(USER, "H264", 2), "video with one audio channel")
+    check(all(v["ch"] == 1 for v in ctx.sniff.of(USER, "H264")), "travels on channel 1")
+
+    def plays():
+        return len(re.findall(r"JT_TEST video play match", receiver.log()))
+
+    def video_since(t):
+        return [v for v in ctx.sniff.of(USER, "H264") if v["t"] > t + 0.5]
+
+    sync = Sync(ctx.dir, ctx.server.port, int(INTERVAL * 6))
+    added, before = time.time(), plays()
+    ctx.jt.cmd("channel add")
+    ctx.jt.cmd("input 1 1")
+    time.sleep(1)
+    ch = ctx.sniff.channels
+    check(ch.get((USER, 1), {}).get("flags") == 0 and ch[(USER, 1)]["active"], f"the new audio channel takes index 1 ({ch.get((USER, 1))})")
+    check(ch.get((USER, 2), {}).get("flags") == 0x10 and ch[(USER, 2)]["active"], f"the video moves to channel 2 ({ch.get((USER, 2))})")
+    deadline = time.time() + INTERVAL * 4
+    while time.time() < deadline and len(video_since(added)) < 3:
+        time.sleep(0.1)
+    moved = video_since(added)
+    check(len(moved) >= 3 and all(v["ch"] == 2 for v in moved), f"video keeps going on channel 2 ({[v['ch'] for v in moved]})")
+    check([a for a in ctx.sniff.of(USER, "OGGv", 1) if a["t"] > added], "the second audio channel transmits")
+    check(not ctx.sniff.of(USER, "OGGv", 2), "no audio on the video channel")
+    log = sync.wait(INTERVAL * 8)
+    core = re.findall(r"video PLAY: key=jamtaba:2 match=(\w+)", log)
+    check(len(core) >= 2, f"ninjamzap-core plays it from channel 2 ({len(core)}: {set(core)})")
+    check(plays() >= before + 4, f"a Jamtaba receiver keeps playing it ({plays() - before} since the move)")
+
+    removed, before = time.time(), plays()
+    ctx.jt.cmd("channel remove 1")
+    time.sleep(1)
+    ch = ctx.sniff.channels
+    check(ch[(USER, 1)]["flags"] == 0x10 and ch[(USER, 1)]["active"], f"removing it, the video goes back to channel 1 ({ch[(USER, 1)]})")
+    check(not ch[(USER, 2)]["active"], "and channel 2 is gone")
+    deadline = time.time() + INTERVAL * 4
+    while time.time() < deadline and len(video_since(removed)) < 2:
+        time.sleep(0.1)
+    back = video_since(removed)
+    check(len(back) >= 2 and all(v["ch"] == 1 for v in back), f"video keeps going on channel 1 ({[v['ch'] for v in back]})")
+    check(plays() >= before + 1, f"and the receiver keeps playing it ({plays() - before})")
+    check(not ctx.jt.errors() and not receiver.errors(), "no errors on either side")
+
+
 SCENARIOS = [
     ("wire format", s_wire_format),
     ("camera before join", s_camera_before_join),
@@ -1329,6 +1384,7 @@ SCENARIOS = [
     ("jamtaba to jamtaba sync", s_jamtaba_to_jamtaba_sync),
     ("legacy jtbv receive", s_legacy_jtbv_receive),
     ("camera toggle", s_camera_toggle),
+    ("video after audio channels", s_video_after_audio_channels),
     ("bpm change", s_bpm_change),
     ("rejoin", s_rejoin),
     ("receiver stall", s_receiver_stall),

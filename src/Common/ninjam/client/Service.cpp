@@ -307,19 +307,32 @@ void Service::process(const UserInfoChangeNotifyMessage &msg)
     for (auto iterator = msg.getUsers().keyBegin();
          iterator != msg.getUsers().keyEnd(); ++iterator) {
         const auto& userFullName = *iterator;
-        // Video-only channels (flag 0x10) aren't audio tracks. One camera per user for now.
+        // Video-only channels (flag 0x10) aren't audio tracks, whatever their index: the video goes
+        // after the audio channels, so its index moves when the sender adds or removes one.
+        // One camera per user for now.
         QList<UserChannel> channels;
         bool videoChanged = false;
         for (const UserChannel &channel : msg.getUsers().values(userFullName)) {
+            const bool isVideoIndex = videoChannels.value(userFullName, 255) == channel.getIndex();
             if (static_cast<quint8>(channel.getFlags()) & 0x10) {
-                if (channel.isActive() && !videoChannels.contains(userFullName)) {
-                    videoChannels.insert(userFullName, channel.getIndex());
+                if (channel.isActive() && !isVideoIndex) {
+                    videoChannels.insert(userFullName, channel.getIndex()); // new, or moved here
                     videoChanged = true;
-                } else if (!channel.isActive() && videoChannels.value(userFullName, 255) == channel.getIndex()) {
+
+                    if (currentServer->getOrCreateUser(userFullName).hasChannel(channel.getIndex())) {
+                        UserChannel audioChannel(channel); // the audio channel that had this index is gone
+                        audioChannel.setActive(false);
+                        channels.append(audioChannel);
+                    }
+                } else if (!channel.isActive() && isVideoIndex) {
                     videoChannels.remove(userFullName);
                     videoChanged = true;
                 }
             } else {
+                if (isVideoIndex) { // the video moved: an audio channel has its old index now
+                    videoChannels.remove(userFullName);
+                    videoChanged = true;
+                }
                 channels.append(channel);
             }
         }

@@ -276,7 +276,7 @@ void LocalTrackGroupView::createChannelsActions(QMenu &menu)
     QAction *addChannelAction = menu.addAction(QIcon(":/images/more.png"), tr("Add channel"));
     connect(addChannelAction, &QAction::triggered, this, &LocalTrackGroupView::addChannel);
 
-    addChannelAction->setEnabled(mainWindow->getChannelGroupsCount() < 2); // at this moment users can't create more channels
+    addChannelAction->setEnabled(mainWindow->getAudioChannelGroupsCount() < 2); // at this moment users can't create more channels (the video one apart)
     if (mainWindow->getChannelGroupsCount() > 1) {
         for (int i = 2; i <= mainWindow->getChannelGroupsCount(); ++i) {
             QString channelName = mainWindow->getChannelGroupName(i-1);
@@ -372,9 +372,9 @@ void LocalTrackGroupView::setToNarrow()
 
 void LocalTrackGroupView::highlightHoveredChannel()
 {
-    int channelGroupIndex = 1; // just the second channel can be highlighted at moment
-    if (channelGroupIndex < mainWindow->getChannelGroupsCount())
-        mainWindow->highlightChannelGroup(channelGroupIndex);
+    auto action = qobject_cast<QAction *>(QObject::sender());
+    if (action)
+        mainWindow->highlightChannelGroup(action->data().toInt());
 }
 
 void LocalTrackGroupView::highlightHoveredSubchannel()
@@ -401,7 +401,9 @@ void LocalTrackGroupView::detachMainControllerInSubchannels()
 
 void LocalTrackGroupView::removeChannel()
 {
-    mainWindow->removeChannelsGroup(mainWindow->getChannelGroupsCount()-1);
+    auto action = qobject_cast<QAction *>(QObject::sender());
+    if (action)
+        mainWindow->removeChannelsGroup(action->data().toInt()); // the channel index (the video channel isn't always the last)
 }
 
 // PRESETS

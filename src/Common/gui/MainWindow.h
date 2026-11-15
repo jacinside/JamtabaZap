@@ -81,6 +81,8 @@ public:
     virtual LocalInputTrackSettings getInputsSettings() const;
 
     int getChannelGroupsCount() const;
+    int getAudioChannelGroupsCount() const;
+    int getVideoChannelIndex() const; // -1 without a video channel
 
     QString getChannelGroupName(int index) const;
 
@@ -280,6 +282,8 @@ private:
     void initializeTestControl();
     void runTestCommand(const QStringList &args);
     void addVideoChannel();
+    LocalTrackGroupView *getVideoChannel() const;
+    void takeOutLocalChannel(LocalTrackGroupView *channel);
     qint64 lastCameraPreview = 0;
     void selectVideoPreset(int preset);
 

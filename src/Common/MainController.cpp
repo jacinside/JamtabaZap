@@ -497,9 +497,12 @@ void MainController::beginSyncedVideoInterval(const ninjam::MessageGuid &audioGu
 
     endSyncedVideoInterval();
 
+    const auto videoChannelIndex = mainWindow->getVideoChannelIndex(); // after the audio channels
+    if (videoChannelIndex < 0)
+        return;
+
     videoIntervalToUpload.reset(new UploadIntervalData()); // generate a new GUID
 
-    static const auto videoChannelIndex = 1;
     ninjamService->sendVideoIntervalBegin(videoIntervalToUpload->getGUID(), videoChannelIndex);
     sendVideoChunk(NinjamZapVideoPacker::syncMarker(videoIntervalCounter++, audioGuid));
 
@@ -556,9 +559,14 @@ void MainController::enqueueVideoDataToUpload(const QByteArray &encodedData, boo
             videoIntervalToUpload->clear();
         }
 
+        const auto videoChannelIndex = mainWindow->getVideoChannelIndex(); // in its own channel, after the audio ones
+        if (videoChannelIndex < 0) {
+            videoIntervalToUpload.reset();
+            return;
+        }
+
         videoIntervalToUpload.reset(new UploadIntervalData()); // generate a new GUID
 
-        static const auto videoChannelIndex = 1; // always sending video in 2nd channel to avoid drop intervals in first channel
         ninjamService->sendIntervalBegin(videoIntervalToUpload->getGUID(), videoChannelIndex, false); // starting a new video interval
     }
 

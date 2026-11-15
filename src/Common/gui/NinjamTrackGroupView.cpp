@@ -130,14 +130,14 @@ QColor NinjamTrackGroupView::getTintColor() const
 void NinjamTrackGroupView::addVideoInterval(const QByteArray &encodedVideoData)
 {
 
-    // hide the video (2nd) channel
-    if (trackViews.size() > 1) {
-        auto audioChannel = getTrack<NinjamTrackView>(0);
-        auto videoChannel = getTrack<NinjamTrackView>(1);
+    // hide the video channel (the 2nd one in JamTaba, after all the audio ones in JamtabaZap)
+    for (int i = 1; i < trackViews.size(); ++i) {
+        auto videoChannel = getTrack<NinjamTrackView>(i);
         if (videoChannel->isVideoChannel()) {
             videoChannel->setVisible(false);
 
-            audioChannel->setToWide(); // when using video the audio channel is forced to wide
+            if (trackViews.size() == 2) // a single audio channel
+                getTrack<NinjamTrackView>(0)->setToWide(); // when using video the audio channel is forced to wide
         }
     }
 
@@ -475,8 +475,13 @@ Qt::Orientation NinjamTrackGroupView::getTracksOrientation() const
 
 void NinjamTrackGroupView::setNarrowStatus(bool narrow)
 {
-    auto containsVideoChannel = trackViews.size() > 1 && getTrack<NinjamTrackView>(1)->isVideoChannel();
-    auto setToWide = (!narrow && trackViews.size() <= 1) || containsVideoChannel;
+    int videoChannels = 0;
+    for (int i = 1; i < trackViews.size(); ++i) {
+        if (getTrack<NinjamTrackView>(i)->isVideoChannel())
+            ++videoChannels;
+    }
+    auto singleAudioChannelWithVideo = videoChannels > 0 && trackViews.size() - videoChannels == 1;
+    auto setToWide = (!narrow && trackViews.size() <= 1) || singleAudioChannelWithVideo;
 
     for (auto trackView : trackViews) {
         if (setToWide)

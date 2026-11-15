@@ -85,6 +85,13 @@ bool MainWindowStandalone::runPlatformTestCommand(const QStringList &args)
     } else if (cmd == QStringLiteral("plugineditor") && testPlugin) {
         testPlugin->openEditor(geometry().center());
         qInfo() << "JT_TEST plugin editor opened";
+    } else if (cmd == QStringLiteral("input")) { // input <channel> <device input>: mono
+        const int index = args.value(1).toInt();
+        auto channel = index >= 0 && index < getChannelGroupsCount() ? getLocalChannel<LocalTrackGroupViewStandalone>(index) : nullptr;
+        auto track = channel ? channel->getTrack<LocalTrackViewStandalone>(0) : nullptr;
+        if (track)
+            controller->setInputTrackToMono(track->getInputIndex(), args.value(2).toInt());
+        qInfo() << "JT_TEST input" << (track ? track->getInputIndex() : -1);
     } else if (cmd == QStringLiteral("pluginremove") && testPlugin) {
         testPlugin->closeEditor();
         controller->removePlugin(0, testPlugin);
