@@ -18,7 +18,9 @@ echo "FFmpeg prefix: $PREFIX, x264: $X264_PREFIX"
 apt-get update -qq && apt-get install -y -qq nasm > /dev/null
 nasm -v
 
-git clone --quiet -b stable https://code.videolan.org/videolan/x264.git /tmp/x264
+# VideoLAN's server sometimes refuses CI runners: GitHub's mirror has the same commit
+git clone --quiet -b stable https://code.videolan.org/videolan/x264.git /tmp/x264 \
+    || git clone --quiet -b stable https://github.com/mirror/x264.git /tmp/x264
 (cd /tmp/x264 && git checkout --quiet b35605ace3ddf7c1a5d67a2eb553f034aef41d55)
 X264_ARGS=(--prefix="$X264_PREFIX" --enable-static --disable-cli --enable-pic)
 [ -n "$CROSS" ] && X264_ARGS+=(--host=x86_64-w64-mingw32 --cross-prefix="$CROSS")
@@ -28,7 +30,10 @@ grep -E '^asm:' /tmp/x264/config.log /tmp/x264-configure.log 2>/dev/null | head 
 grep -q '^#define HAVE_X86_INLINE_ASM 1\|^#define HAVE_MMX 1' /tmp/x264/config.h || { echo "x264 would build without assembly"; exit 1; }
 make -C /tmp/x264 -j"$(nproc)" > /tmp/x264-make.log 2>&1 || { tail -30 /tmp/x264-make.log; exit 1; }
 make -C /tmp/x264 install-lib-static > /dev/null
-"${CROSS}nm" "$X264_PREFIX/lib/libx264.a" 2>/dev/null | grep -q -i 'satd.*avx2' || { echo "libx264.a has no AVX2 code"; exit 1; }
+# counted, not grep -q: with pipefail, grep leaving early fails the pipe
+AVX2=$("${CROSS}nm" "$X264_PREFIX/lib/libx264.a" 2>/dev/null | grep -c -i 'satd.*avx2' || true)
+[ "$AVX2" -gt 0 ] || { echo "libx264.a has no AVX2 code"; exit 1; }
+echo "libx264.a: $AVX2 AVX2 functions"
 echo "x264 with assembly installed in $X264_PREFIX"
 
 git clone --quiet --depth 1 -b n4.4.1 https://github.com/FFmpeg/FFmpeg.git /tmp/ffmpeg
