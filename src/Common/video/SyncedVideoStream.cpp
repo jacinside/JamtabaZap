@@ -212,6 +212,9 @@ private:
             gpuFormat = gpuPixelFormat(codec, device.type);
             if (gpuFormat != AV_PIX_FMT_NONE) {
                 context->hw_device_ctx = av_buffer_ref(device.ref);
+                // Real-time encoders send Baseline without its "constrained" flag, which D3D11VA and
+                // DXVA2 reject although they decode it: these streams use nothing Constrained Baseline lacks.
+                context->hwaccel_flags |= AV_HWACCEL_FLAG_ALLOW_PROFILE_MISMATCH;
                 context->opaque = this;
                 context->get_format = pickFormat;
             }

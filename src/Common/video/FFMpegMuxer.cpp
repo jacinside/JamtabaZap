@@ -310,6 +310,11 @@ bool FFMpegMuxer::addVideoStream(AVCodecID codecID, AVDictionary **opts)
          * identical to 1. */
     codecContext->time_base = AVRational{ 1, static_cast<int>(videoFrameRate) };
 
+    // As many threads as the machine has: FFmpeg's default is one, and a single core can't encode
+    // HD at its frame rate on many machines. With tune=zerolatency x264 splits each frame in slices
+    // among them, which adds no delay.
+    codecContext->thread_count = 0;
+
     codecContext->gop_size = continuousMode ? 3000 : 30; // emit one intra frame every N frames at most
     codecContext->pix_fmt = AV_PIX_FMT_YUV420P;
 
