@@ -1262,6 +1262,7 @@ void MainWindow::initializeLoginService()
     connect(loginService, &LoginService::roomsListAvailable, this, &MainWindow::refreshPublicRoomsList);
 
     connect(loginService, &LoginService::newVersionAvailableForDownload, this, &MainWindow::showNewVersionAvailableMessage);
+    loginService->checkForNewVersion();
 }
 
 void MainWindow::closeContentTab(int index)

@@ -110,7 +110,11 @@ LoginService::LoginService(QObject *parent) :
 
     // the first public servers list query
     httpClient.get(QNetworkRequest(roomsUrl));
+}
 
+// Called once whoever shows the notice is connected: an answer arriving before that was lost.
+void LoginService::checkForNewVersion()
+{
     // Automation asks only when a test wants it: an update notice would stop it.
     const QString testVersionUrl = qEnvironmentVariable("JT_TEST_VERSION_URL");
     if (!testVersionUrl.isEmpty() || !qEnvironmentVariableIsSet("JT_TEST_CONTROL")) {
@@ -118,7 +122,6 @@ LoginService::LoginService(QObject *parent) :
         versionRequest.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("JamtabaZap")); // GitHub requires one
         httpClient.get(versionRequest);
     }
-
 }
 
 void LoginService::handleServersJson(const QJsonObject &root)

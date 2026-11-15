@@ -623,14 +623,13 @@ def s_automation_stays_out_of_the_way(ctx):
     check(hosts == {"localhost"}, f"it only connects to the local server ({hosts})")
 
 
-def serve_json(value):
-    """A local stand-in for a web service. As slow as a real one: the main window connects to the
-    answer while it starts."""
+def serve_json(value, delay=3):
+    """A local stand-in for a web service, as slow as a real one (delay seconds)."""
     body = json.dumps(value).encode()
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
-            time.sleep(3)
+            time.sleep(delay)
             self.send_response(200)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
@@ -692,11 +691,25 @@ def s_update_notice(ctx):
         os.makedirs(workdir)
         jt = Jamtaba(workdir, marks=False, extra_env=dict(JT_TEST_VERSION_URL=url))
         try:
-            time.sleep(1)
-            told = f"JT_TEST new version {tag}" in jt.log()
+            # the answer takes 3 s (serve_json); give it a few more
+            deadline = time.time() + 6
+            told = False
+            while not told and time.time() < deadline:
+                time.sleep(0.25)
+                told = f"JT_TEST new version {tag}" in jt.log()
         finally:
             jt.stop()
         check(told == expected, f"with {APP_VERSION} running, {tag} {'is offered' if expected else 'is not offered'}")
+
+
+def s_update_notice_fast_answer(ctx):
+    # GitHub can answer before the main window is up: the notice must not get lost
+    url = serve_json([dict(tag_name="v3.0.0", body="notes", published_at="2026-11-07T00:00:00Z")], delay=0)
+    ctx.jt = Jamtaba(ctx.dir, marks=False, extra_env=dict(JT_TEST_VERSION_URL=url))
+    deadline = time.time() + 6
+    while time.time() < deadline and "JT_TEST new version v3.0.0" not in ctx.jt.log():
+        time.sleep(0.25)
+    check("JT_TEST new version v3.0.0" in ctx.jt.log(), "an answer before the window is up is still shown")
 
 
 def record_posts():
@@ -1403,6 +1416,7 @@ SCENARIOS = [
     ("ninjamzap rooms stand out", s_ninjamzap_rooms_stand_out),
     ("slow login", s_slow_login),
     ("update notice", s_update_notice),
+    ("update notice fast answer", s_update_notice_fast_answer),
     ("presence", s_presence),
     ("vst plugin", s_vst_plugin),
     ("vst scanner", s_vst_scanner),

@@ -165,6 +165,7 @@ class LoginService : public QObject
 public:
 
     explicit LoginService(QObject *parent = 0);
+    void checkForNewVersion();
     //virtual ~LoginService();
 
 signals:
