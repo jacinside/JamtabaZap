@@ -215,7 +215,7 @@ class Sniffer(threading.Thread):
 class Jamtaba:
     def __init__(self, workdir, name=USER, marks=True, extra_env=None):
         self.dir = os.path.join(workdir, name)
-        data = os.path.join(self.dir, "home/Library/Application Support/JamTaba 2")
+        data = os.path.join(self.dir, "home/Library/Application Support/JamtabaZap")
         os.makedirs(data)
         cfg = dict(masterGain=1, userName=name, translation="en", theme="Navy_nm",
                    audio=dict(sampleRate=48000, bufferSize=256, firstIn=0, lastIn=1, firstOut=0, lastOut=1,

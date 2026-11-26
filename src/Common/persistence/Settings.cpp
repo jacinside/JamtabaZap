@@ -1157,7 +1157,7 @@ bool Settings::readFile(const QList<SettingsObject *> &sections)
         return true;
     }
     else {
-        qWarning(jtConfigurator) << "Settings : Can't load Jamtaba 2 config file:"
+        qWarning(jtConfigurator) << "Settings : Can't load the config file:"
                                  << configFile.errorString();
     }
 

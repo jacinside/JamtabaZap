@@ -2,6 +2,7 @@
 #include "MainControllerPlugin.h"
 #include "NinjamControllerPlugin.h"
 #include "log/Logging.h"
+#include "Configurator.h"
 #include <QApplication>
 
 // anti troll scheme to avoid multiple connections in ninjam servers
@@ -38,7 +39,7 @@ void JamTabaPlugin::initialize()
     if (!isRunning()) {
         if (!controller) {
             qCDebug(jtVstPlugin) << "Plugin initialize()..." << this;
-            QApplication::setApplicationName("Jamtaba 2");
+            QApplication::setApplicationName(Configurator::APP_NAME);
             QApplication::setApplicationVersion(APP_VERSION);
 
             persistence::Settings settings; // read from file in constructor

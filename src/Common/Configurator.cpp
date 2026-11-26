@@ -15,9 +15,11 @@
 #include <csignal>
 
 #include "log/Logging.h"
+#include "persistence/Settings.h"
 
 QScopedPointer<Configurator> Configurator::instance(nullptr);
 const QString Configurator::LOG_FILE = "log.txt";
+const QString Configurator::APP_NAME = QStringLiteral("JamtabaZap");
 
 const QString Configurator::PRESETS_FOLDER_NAME = "Presets";
 const QString Configurator::CACHE_FOLDER_NAME = "Cache";
@@ -217,6 +219,8 @@ bool Configurator::setUp()
 
     setupLogConfigFile();
 
+    adoptBetaSettings(); // after the log is set up, so log.txt tells what it did
+
     std::set_terminate(Configurator::terminateHandler);
 
     std::signal(SIGABRT, Configurator::signalHandler); // Abnormal termination of the program, such as a call to abort.
@@ -241,6 +245,46 @@ bool Configurator::setUp()
     qInfo() << "JamTaba Base dir:" << baseDir.absolutePath();
 
     return true;
+}
+
+// Up to 3.0.0-beta.4 JamtabaZap kept its files in JamTaba's folder ("JamTaba 2"), where it also read the
+// settings other JamTaba versions left there, and those could crash it. Bring over only the settings a
+// JamtabaZap beta wrote (they're the only ones with "videoPreset"), with their presets, and leave JamTaba's.
+void Configurator::adoptBetaSettings()
+{
+    const QDir appDataDir = getApplicationDataDir();
+    const QString settingsName = persistence::Settings::getFileName();
+    if (QFileInfo::exists(baseDir.absoluteFilePath(settingsName)))
+        return;
+
+    QDir oldAppDataDir(appDataDir);
+    if (!oldAppDataDir.cdUp())
+        return;
+    const QDir oldBaseDir(oldAppDataDir.absoluteFilePath(QStringLiteral("JamTaba 2/") + appDataDir.relativeFilePath(baseDir.absolutePath())));
+
+    QFile oldSettings(oldBaseDir.absoluteFilePath(settingsName));
+    if (!oldSettings.open(QIODevice::ReadOnly))
+        return;
+    if (!oldSettings.readAll().contains("\"videoPreset\"")) {
+        qInfo() << "Not taking the settings in" << oldBaseDir.absolutePath() << ": another JamTaba wrote them";
+        return;
+    }
+    oldSettings.close();
+
+    baseDir.mkpath(".");
+    if (!QFile::copy(oldSettings.fileName(), baseDir.absoluteFilePath(settingsName))) {
+        qWarning() << "Couldn't copy the settings from" << oldBaseDir.absolutePath();
+        return;
+    }
+
+    const QDir oldPresetsDir = createPresetsDir(oldBaseDir);
+    if (oldPresetsDir.exists()) {
+        presetsDir.mkpath(".");
+        for (const QFileInfo &preset : oldPresetsDir.entryInfoList(QDir::Files))
+            QFile::copy(preset.absoluteFilePath(), presetsDir.absoluteFilePath(preset.fileName()));
+    }
+
+    qInfo() << "Settings brought over from" << oldBaseDir.absolutePath();
 }
 
 QDir Configurator::createPresetsDir(const QDir &baseDir)

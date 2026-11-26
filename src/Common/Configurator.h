@@ -14,6 +14,8 @@ class Configurator
 {
 
 public:
+    static const QString APP_NAME; // names the folder that holds the settings, presets and log
+
     static Configurator *getInstance();
 
     ~Configurator();
@@ -23,7 +25,7 @@ public:
 
     bool setUp();
 
-    bool folderTreeExists() const; // check if Jamtaba 2 folder exists in application data
+    bool folderTreeExists() const; // check if the JamtabaZap folder exists in application data
 
     QDir getCacheDir() const;
     QDir getPresetsDir() const;
@@ -69,6 +71,7 @@ private:
 
     void createFoldersTree();
     void initializeDirs(); // this function is implemented in ConfiguratorStandalone.cpp and in ConfiguratorVST.cpp. Only the correct .cpp file is included in .pro files.
+    void adoptBetaSettings();
     void exportLogIniFile();
     void exportPrivateServersExampleFile();
     void setupLogConfigFile();

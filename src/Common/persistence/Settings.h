@@ -404,6 +404,9 @@ public:
 
 class Settings
 {
+public:
+    static QString getFileName() { return fileName; }
+
 private:
     static QString fileName;
     AudioSettings audioSettings;
